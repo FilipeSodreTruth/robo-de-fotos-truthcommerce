@@ -85,11 +85,25 @@ if exist "%PASTA%\AGENTS.md.novo" (
 )
 
 echo.
-echo   Pronto. Abrindo o Codex nesta pasta:
+echo   Qual agente?
+echo     [Enter] Codex   ^|   [c] Claude
+set ESCOLHA=
+set /p ESCOLHA="  > "
+
+set AGENTE=codex
+if /i "%ESCOLHA%"=="c" set AGENTE=claude
+if /i "%ESCOLHA%"=="claude" set AGENTE=claude
+
+echo.
+echo   Pronto. Abrindo o %AGENTE% nesta pasta:
 echo   %PASTA%
 echo.
 echo   Escreva o que voce quer mudar na loja. O agente conduz o resto.
 echo   ----------------------------------------
 echo.
 
-codex -p nuvemshop
+if "%AGENTE%"=="claude" (
+  claude
+) else (
+  codex -p nuvemshop
+)

@@ -87,7 +87,12 @@ Você vai ver algo assim:
   /Users/voce/nuvemshop-lojas/mega-ar
 ```
 
-## 3. O agente abre e fala primeiro
+## 3. Escolha o agente
+
+Ele pergunta qual agente usar. Aperte **Enter** para o Codex (o padrão do time) ou digite
+**c** e Enter para o Claude. Os dois seguem exatamente as mesmas regras.
+
+## 4. O agente abre e fala primeiro
 
 Ele vai se apresentar e pedir o que precisa de você. Você não precisa dar nenhum comando
 especial nem mandar ele "ler" nada — ele já sabe o que fazer.
@@ -96,12 +101,12 @@ Se ele abrir calado esperando, escreva o que você quer:
 
 > deixa os cards de produto da home com mais espaço entre eles
 
-## 4. Responda o que ele pedir
+## 5. Responda o que ele pedir
 
 Ele vai pedir o endereço da loja e uma chave de acesso, explicando onde buscar. Você copia
 da tela e cola no chat.
 
-## 5. Aprove antes de publicar
+## 6. Aprove antes de publicar
 
 Ele abre um navegador, mostra a mudança acontecendo e pergunta se pode publicar. Enquanto
 você não responder, **nada foi para a loja de verdade**.
@@ -127,7 +132,8 @@ você não responder, **nada foi para a loja de verdade**.
 **O agente pede autorização para algo que você não entende.** Responda que não e pergunte a
 ele por que precisa daquilo antes de liberar.
 
-**Apareceu erro logo ao abrir.** Provavelmente falta o Node ou o Codex. Chame quem fez a
+**Apareceu erro logo ao abrir.** Provavelmente falta o Node, ou o agente que você escolheu
+não está instalado nessa máquina. Chame quem fez a
 instalação com você.
 
 **Ele pediu a senha da minha conta Nuvemshop.** Não forneça e avise o time. Ele nunca deve

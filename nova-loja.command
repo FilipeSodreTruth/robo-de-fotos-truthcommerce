@@ -91,11 +91,25 @@ else
 fi
 
 echo ""
-echo "  Pronto. Abrindo o Codex nesta pasta:"
+echo "  Qual agente?"
+echo "    [Enter] Codex   |   [c] Claude"
+read -p "  > " ESCOLHA
+
+case "$ESCOLHA" in
+  c|C|claude|Claude) AGENTE="claude" ;;
+  *)                 AGENTE="codex"  ;;
+esac
+
+echo ""
+echo "  Pronto. Abrindo o $AGENTE nesta pasta:"
 echo "  $PASTA"
 echo ""
 echo "  Escreva o que você quer mudar na loja. O agente conduz o resto."
 echo "  ----------------------------------------"
 echo ""
 
-exec codex -p nuvemshop
+if [ "$AGENTE" = "claude" ]; then
+  exec claude
+else
+  exec codex -p nuvemshop
+fi
