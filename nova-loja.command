@@ -42,22 +42,29 @@ else
 fi
 
 # garante o perfil de permissões do Codex, uma vez por máquina
-CFG="$HOME/.codex/config.toml"
 mkdir -p "$HOME/.codex"
-touch "$CFG"
-if ! grep -q "\[profiles.nuvemshop\]" "$CFG"; then
-  echo "  Configurando o perfil de permissões do Codex (primeira vez)..."
-  {
-    echo ""
-    echo "[profiles.nuvemshop]"
-    echo 'model = "gpt-5.6-sol"'
-    echo 'model_reasoning_effort = "medium"'
-    echo 'approval_policy = "on-request"'
-    echo 'sandbox_mode = "workspace-write"'
-    echo ""
-    echo "[profiles.nuvemshop.sandbox_workspace_write]"
-    echo "network_access = true"
-  } >> "$CFG"
+PERFIL="$HOME/.codex/nuvemshop.config.toml"
+if [ ! -f "$PERFIL" ]; then
+  echo "  Configurando o perfil de permissoes do Codex (primeira vez)..."
+  cat > "$PERFIL" <<'TOMLEOF'
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+TOMLEOF
+fi
+
+# versoes antigas deste script gravavam o perfil dentro do config.toml,
+# formato que o Codex nao aceita mais junto com -p
+if grep -q "\[profiles.nuvemshop\]" "$HOME/.codex/config.toml" 2>/dev/null; then
+  echo ""
+  echo "  ATENCAO: existe um bloco antigo [profiles.nuvemshop] no seu"
+  echo "  ~/.codex/config.toml. Apague esse bloco inteiro, senao o Codex"
+  echo "  recusa o perfil. Para abrir:  open -e ~/.codex/config.toml"
+  echo ""
 fi
 
 # baixa a versão atual dos manuais, sempre

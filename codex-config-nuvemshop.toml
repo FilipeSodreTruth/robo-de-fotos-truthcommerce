@@ -1,12 +1,16 @@
 # ============================================================
 #  Perfil "nuvemshop" para o Codex
-#  Cole este bloco no fim do seu ~/.codex/config.toml
+#  Salve este conteúdo como ~/.codex/nuvemshop.config.toml
 #  (o script nova-loja faz isso sozinho na primeira execução)
+#
+#  IMPORTANTE: nas versões atuais do Codex, cada perfil vive num
+#  arquivo próprio. NÃO cole isto dentro do config.toml como
+#  [profiles.nuvemshop] — o Codex recusa o -p nuvemshop se
+#  encontrar o formato antigo lá.
 #
 #  Uso: codex -p nuvemshop
 # ============================================================
 
-[profiles.nuvemshop]
 model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
 
@@ -17,7 +21,7 @@ approval_policy = "on-request"
 # workspace-write: pode ler e escrever na pasta da loja, não no resto da máquina.
 sandbox_mode = "workspace-write"
 
-[profiles.nuvemshop.sandbox_workspace_write]
+[sandbox_workspace_write]
 # ATENÇÃO: sem isto, o Codex fica sem rede e a CLI da Nuvemshop não
 # consegue falar com a API — o agente trava no passo 01 sem erro claro.
 network_access = true

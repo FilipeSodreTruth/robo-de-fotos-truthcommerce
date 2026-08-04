@@ -39,21 +39,26 @@ if exist "HANDOFF.md" (
   echo   Criando a pasta do cliente.
 )
 
-set CFG=%USERPROFILE%\.codex\config.toml
 if not exist "%USERPROFILE%\.codex" mkdir "%USERPROFILE%\.codex"
-if not exist "%CFG%" type nul > "%CFG%"
-findstr /c:"[profiles.nuvemshop]" "%CFG%" >nul 2>&1
-if errorlevel 1 (
+set PERFIL=%USERPROFILE%\.codex\nuvemshop.config.toml
+if not exist "%PERFIL%" (
   echo   Configurando o perfil de permissoes do Codex ^(primeira vez^)...
-  >>"%CFG%" echo.
-  >>"%CFG%" echo [profiles.nuvemshop]
-  >>"%CFG%" echo model = "gpt-5.6-sol"
-  >>"%CFG%" echo model_reasoning_effort = "medium"
-  >>"%CFG%" echo approval_policy = "on-request"
-  >>"%CFG%" echo sandbox_mode = "workspace-write"
-  >>"%CFG%" echo.
-  >>"%CFG%" echo [profiles.nuvemshop.sandbox_workspace_write]
-  >>"%CFG%" echo network_access = true
+  >"%PERFIL%" echo model = "gpt-5.6-sol"
+  >>"%PERFIL%" echo model_reasoning_effort = "medium"
+  >>"%PERFIL%" echo approval_policy = "on-request"
+  >>"%PERFIL%" echo sandbox_mode = "workspace-write"
+  >>"%PERFIL%" echo.
+  >>"%PERFIL%" echo [sandbox_workspace_write]
+  >>"%PERFIL%" echo network_access = true
+)
+
+findstr /c:"[profiles.nuvemshop]" "%USERPROFILE%\.codex\config.toml" >nul 2>&1
+if not errorlevel 1 (
+  echo.
+  echo   ATENCAO: existe um bloco antigo [profiles.nuvemshop] no seu
+  echo   config.toml. Apague esse bloco inteiro, senao o Codex recusa o perfil.
+  echo   Arquivo: %USERPROFILE%\.codex\config.toml
+  echo.
 )
 
 echo   Atualizando os manuais...
