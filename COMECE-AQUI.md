@@ -32,7 +32,7 @@ começar.
 Abra o **Terminal**:
 
 - No Mac: aperte `Cmd + Espaço`, digite `Terminal`, Enter.
-- No Windows: aperte a tecla Windows, digite `cmd`, Enter.
+- No Windows: aperte a tecla Windows, digite `powershell`, Enter.
 
 Vai abrir uma janela preta com texto. Não se assuste — você vai usar isso uma vez só.
 
@@ -44,11 +44,14 @@ No Mac:
 curl -fsSL https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main/nova-loja.command -o ~/Desktop/nova-loja.command && chmod +x ~/Desktop/nova-loja.command
 ```
 
-No Windows:
+No Windows (PowerShell):
 
 ```
-curl -fsSL https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main/nova-loja.bat -o "%USERPROFILE%\Desktop\nova-loja.bat"
+curl.exe -fsSL https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main/nova-loja.bat -o "$([Environment]::GetFolderPath('Desktop'))\nova-loja.bat"
 ```
+
+Copie exatamente como está, incluindo o `.exe` — sem ele o PowerShell reclama de
+"parâmetro 'fsSL'".
 
 **Como saber se deu certo:** o Terminal não responde nada (é assim mesmo), e aparece um
 arquivo chamado `nova-loja` na sua área de trabalho. Se ele não apareceu, algo falhou —
