@@ -1,96 +1,151 @@
 # Comece aqui
 
-Este é o atalho para mexer no layout de uma loja Nuvemshop com ajuda do agente.
-Você não precisa saber programar. São três passos.
+Você vai mexer no layout de lojas Nuvemshop com ajuda de um agente de IA. Não precisa saber
+programar e não precisa entender de código.
+
+São **duas partes**: uma instalação que você faz uma vez só, e o uso do dia a dia, que é
+duplo clique.
 
 ---
 
-## Uma vez só, na sua máquina
+# PARTE 1 — Instalação (uma vez na vida, ~15 minutos)
 
-Peça para alguém do time fazer isso com você na primeira vez. Depois nunca mais.
+Peça para alguém do time fazer junto com você. Se travar em algum passo, pare e chame — não
+tente adivinhar.
 
-1. Instale o **Node.js** (versão 18 ou maior): https://nodejs.org
-2. Instale o **Codex**, seguindo as instruções em https://developers.openai.com/codex
-3. Baixe o script do seu sistema e deixe na área de trabalho:
-   - Mac: `nova-loja.command`
-   - Windows: `nova-loja.bat`
-4. **Só no Mac**, duas coisas:
+## Passo 1 de 3 — Instalar o Node
 
-   Na primeira vez, o Mac vai bloquear o arquivo por ter vindo da internet. Clique nele com
-   o **botão direito → Abrir → Abrir mesmo assim**. Depois disso o duplo clique funciona
-   normalmente.
+Abra https://nodejs.org e baixe a versão que o site sugerir. Instale como qualquer programa:
+avançar, avançar, concluir.
 
-   E abra o Terminal uma vez e cole esta linha:
+Nada vai aparecer na tela depois. É normal — ele não tem ícone nem janela.
 
-   ```
-   chmod +x ~/Desktop/nova-loja.command
-   ```
+## Passo 2 de 3 — Instalar o Codex
 
-O script já vem com o endereço dos manuais configurado, e ajusta sozinho as permissões do
-Codex na primeira execução. Você não precisa mexer em nada disso.
+Siga as instruções em https://developers.openai.com/codex
+
+Você vai precisar entrar com uma conta. Se não tiver, peça ao time o acesso antes de
+começar.
+
+## Passo 3 de 3 — Pegar o atalho
+
+Abra o **Terminal**:
+
+- No Mac: aperte `Cmd + Espaço`, digite `Terminal`, Enter.
+- No Windows: aperte a tecla Windows, digite `cmd`, Enter.
+
+Vai abrir uma janela preta com texto. Não se assuste — você vai usar isso uma vez só.
+
+**Copie a linha inteira** abaixo (a do seu sistema), cole na janela preta e aperte Enter.
+
+No Mac:
+
+```
+curl -fsSL https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main/nova-loja.command -o ~/Desktop/nova-loja.command && chmod +x ~/Desktop/nova-loja.command
+```
+
+No Windows:
+
+```
+curl -fsSL https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main/nova-loja.bat -o "%USERPROFILE%\Desktop\nova-loja.bat"
+```
+
+**Como saber se deu certo:** o Terminal não responde nada (é assim mesmo), e aparece um
+arquivo chamado `nova-loja` na sua área de trabalho. Se ele não apareceu, algo falhou —
+chame o time.
+
+Pode fechar o Terminal. Acabou a instalação.
+
+> **Por que colar uma linha em vez de baixar pelo navegador?** Porque arquivo baixado pelo
+> navegador vem bloqueado pelo sistema, e você receberia um erro de "privilégios de acesso"
+> ao tentar usar. A linha acima já traz o arquivo liberado.
 
 ---
 
-## Toda vez que for trabalhar numa loja
+# PARTE 2 — Uso do dia a dia
 
-**1. Duplo clique no script.** `nova-loja.command` no Mac, `nova-loja.bat` no Windows.
+## 1. Duplo clique no `nova-loja` da área de trabalho
 
-**2. Digite o nome do cliente** e aperte Enter. Use sempre o mesmo nome para o mesmo
-cliente — é assim que o agente reencontra o histórico do que já foi feito ali.
+Abre uma janela preta perguntando o nome do cliente.
 
-**3. Escreva o que você quer mudar**, em português normal, quando o Codex abrir.
+## 2. Digite o nome do cliente e Enter
+
+Ex.: `mega-ar`. **Use sempre o mesmo nome para o mesmo cliente** — é assim que o agente
+reencontra o histórico do que já foi feito naquela loja.
+
+Você vai ver algo assim:
+
+```
+  Criando a pasta do cliente.
+  Atualizando os manuais...
+  Manuais atualizados.
+
+  Pronto. Abrindo o Codex nesta pasta:
+  /Users/voce/nuvemshop-lojas/mega-ar
+```
+
+## 3. O agente abre e fala primeiro
+
+Ele vai se apresentar e pedir o que precisa de você. Você não precisa dar nenhum comando
+especial nem mandar ele "ler" nada — ele já sabe o que fazer.
+
+Se ele abrir calado esperando, escreva o que você quer:
 
 > deixa os cards de produto da home com mais espaço entre eles
 
-Pronto. O agente assume dali: pede o que precisar de você, testa a mudança ao vivo no
-navegador, espera sua aprovação e só então publica.
+## 4. Responda o que ele pedir
+
+Ele vai pedir o endereço da loja e uma chave de acesso, explicando onde buscar. Você copia
+da tela e cola no chat.
+
+## 5. Aprove antes de publicar
+
+Ele abre um navegador, mostra a mudança acontecendo e pergunta se pode publicar. Enquanto
+você não responder, **nada foi para a loja de verdade**.
 
 ---
 
-## Sobre as permissões
+# O que você NÃO precisa fazer
 
-O agente já vem configurado para trabalhar sozinho dentro da pasta daquele cliente: ele lê,
-edita e testa sem ficar pedindo autorização a cada passo. Ele para e pergunta em dois
-momentos, de propósito:
+- ❌ Entrar no GitHub
+- ❌ Baixar arquivos manualmente
+- ❌ Criar pasta
+- ❌ Abrir ou editar os arquivos `.md` que aparecem na pasta do cliente — são do agente
+- ❌ Digitar comandos no Terminal (depois da instalação)
+- ❌ Saber o que é `settings_data.json`, CSS ou tema
 
-- antes de **publicar** a mudança na loja;
-- se precisar fazer algo fora da pasta do cliente.
+---
 
-E existe um comando que ele simplesmente não consegue rodar, mesmo se tentar: o que troca a
-versão do tema que está no ar. Isso é uma trava, não uma recomendação.
+# Se algo der errado
 
-Se aparecer um pedido de autorização que você não entende, responda "não" e pergunte ao
-agente por que ele precisa daquilo antes de liberar.
+**A loja quebrou / sumiu alguma coisa.** Diga isso ao agente em uma frase: "a loja quebrou",
+"sumiu o menu". Ele sabe voltar atrás sozinho e restaura antes de investigar.
 
-## O que esperar do agente
+**O agente pede autorização para algo que você não entende.** Responda que não e pergunte a
+ele por que precisa daquilo antes de liberar.
 
-- **Ele vai pedir o endereço da loja e uma chave de acesso.** Ele explica onde buscar a
-  chave. Você copia da tela e cola no chat.
-- **Ele abre um navegador visível.** Isso é proposital: você acompanha as mudanças
-  acontecendo. Não feche essa janela.
-- **Ele mostra o resultado antes de publicar** e pergunta se pode subir. Enquanto você não
-  responder, nada foi para a loja de verdade.
-- **Ele pergunta antes de fechar o navegador** no fim.
+**Apareceu erro logo ao abrir.** Provavelmente falta o Node ou o Codex. Chame quem fez a
+instalação com você.
 
-## Se algo der errado
-
-Diga em uma frase o que aconteceu — "a loja quebrou", "sumiu o menu", "ficou torto no
-celular". O agente sabe voltar atrás sozinho e vai restaurar a loja antes de investigar.
+**Ele pediu a senha da minha conta Nuvemshop.** Não forneça e avise o time. Ele nunca deve
+pedir isso — só a senha da loja, que é outra coisa (a que aparece para o visitante quando a
+loja está com acesso restrito).
 
 Não digite comandos por conta própria e não feche a janela no meio de uma publicação.
 
-## Perguntas comuns
+---
 
-**Preciso saber o que é essa chave que ele pede?**
-Não. É uma permissão temporária para editar o tema. Não dá acesso a pedidos, clientes nem
-pagamentos, e você pode invalidá-la depois gerando outra.
+# Perguntas comuns
 
-**Ele vai pedir minha senha da Nuvemshop?**
-Nunca. Se pedir, algo está errado — pare e avise o time.
+**Que chave é essa que ele pede?**
+Uma permissão temporária para editar o tema. Não dá acesso a pedidos, clientes nem
+pagamentos, e pode ser invalidada depois gerando outra.
 
 **Posso mexer em duas lojas ao mesmo tempo?**
-Pode, mas em janelas separadas: um duplo clique no script para cada cliente.
+Pode, em janelas separadas: um duplo clique para cada cliente.
 
-**Deu erro logo no começo e nem abriu.**
-Provavelmente falta o Node ou o Codex instalado, ou o endereço do repositório no script
-está errado. Chame quem fez a instalação com você.
+**Preciso repetir a instalação em outro computador?**
+Sim, a Parte 1 inteira. A Parte 2 é igual em qualquer máquina.
+
+**Onde ficam as pastas dos clientes?**
+Em `nuvemshop-lojas`, dentro da sua pasta de usuário. Você não precisa mexer nelas.
