@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "Bash(node -v)",
+      "Bash(npm install:*)",
+      "Bash(npx playwright install:*)",
+      "Bash(tiendanube theme pull:*)",
+      "Bash(tiendanube theme list:*)",
+      "Bash(tiendanube theme --help)",
+      "Bash(tiendanube theme pull --help)",
+      "Bash(nuvemshop theme pull:*)",
+      "Bash(nuvemshop theme list:*)",
+      "Bash(cp -r:*)",
+      "Bash(mktemp:*)",
+      "Bash(cd:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(rg:*)",
+      "Bash(wc:*)"
+    ],
+
+    "ask": [
+      "Bash(tiendanube theme push:*)",
+      "Bash(nuvemshop theme push:*)"
+    ],
+
+    "deny": [
+      "Bash(tiendanube theme publish:*)",
+      "Bash(nuvemshop theme publish:*)",
+      "Bash(rm -rf:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git checkout --:*)",
+      "Bash(git push --force:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}

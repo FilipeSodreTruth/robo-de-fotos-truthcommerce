@@ -1,0 +1,48 @@
+# ============================================================
+#  Perfil "nuvemshop" para o Codex
+#  Cole este bloco no fim do seu ~/.codex/config.toml
+#  (o script nova-loja faz isso sozinho na primeira execução)
+#
+#  Uso: codex -p nuvemshop
+# ============================================================
+
+[profiles.nuvemshop]
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+
+# on-request: o agente trabalha sozinho dentro da pasta e só para
+# quando precisa sair desse limite.
+approval_policy = "on-request"
+
+# workspace-write: pode ler e escrever na pasta da loja, não no resto da máquina.
+sandbox_mode = "workspace-write"
+
+[profiles.nuvemshop.sandbox_workspace_write]
+# ATENÇÃO: sem isto, o Codex fica sem rede e a CLI da Nuvemshop não
+# consegue falar com a API — o agente trava no passo 01 sem erro claro.
+network_access = true
+
+# ------------------------------------------------------------
+#  Comandos que exigem tratamento especial
+#
+#  O Codex controla isso por "rules" / execpolicy, e o formato dessas
+#  chaves mudou entre versões. Confirme a sintaxe da SUA versão com:
+#
+#      codex --help
+#      https://developers.openai.com/codex/permission-modes
+#
+#  O que precisa estar configurado, seja qual for a sintaxe:
+#
+#    PERGUNTAR   tiendanube theme push      (publica na loja de verdade)
+#                nuvemshop theme push
+#
+#    BLOQUEAR    tiendanube theme publish   (troca a versão no ar — nunca)
+#                nuvemshop theme publish
+#                rm -rf
+#                git reset --hard
+#                git checkout --
+#
+#  Enquanto isso não estiver configurado, o approval_policy "on-request"
+#  já faz o Codex parar antes de comandos fora do padrão — mas a trava
+#  explícita do `theme publish` é o que você não quer deixar para depois.
+# ------------------------------------------------------------
