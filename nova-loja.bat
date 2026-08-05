@@ -61,13 +61,31 @@ if not errorlevel 1 (
   echo.
 )
 
+if exist ".modo" (
+  set /p MODO=<.modo
+  echo   Modo desta loja: %MODO% ^(definido antes^)
+) else (
+  echo.
+  echo   Como o codigo vai para a loja?
+  echo     [Enter] simples   - entrego o codigo, voce cola no painel
+  echo     [a]     avancado  - publico direto ^(precisa de token e CLI^)
+  set M=
+  set /p M="  > "
+  set MODO=modo-simples
+  if /i "%M%"=="a" set MODO=modo-avancado
+  if /i "%M%"=="avancado" set MODO=modo-avancado
+  echo %MODO%> .modo
+)
+
 echo   Atualizando os manuais...
-curl -fsSL "%RAW%/AGENTS.md" -o "%PASTA%\AGENTS.md.novo" >nul 2>&1
+curl -fsSL "%RAW%/%MODO%/AGENTS.md" -o "%PASTA%\AGENTS.md.novo" >nul 2>&1
 
 if exist "%PASTA%\AGENTS.md.novo" (
   move /y "%PASTA%\AGENTS.md.novo" "%PASTA%\AGENTS.md" >nul
-  curl -fsSL "%RAW%/CLAUDE.md" -o "%PASTA%\CLAUDE.md" >nul 2>&1
+  curl -fsSL "%RAW%/%MODO%/CLAUDE.md" -o "%PASTA%\CLAUDE.md" >nul 2>&1
   if not exist ".claude" mkdir ".claude"
+  if not exist "codigo\para-colar" mkdir "codigo\para-colar"
+  if not exist "codigo\_anterior" mkdir "codigo\_anterior"
   curl -fsSL "%RAW%/settings.json" -o "%PASTA%\.claude\settings.json" >nul 2>&1
   if not exist "HANDOFF.md" curl -fsSL "%RAW%/HANDOFF-modelo.md" -o "%PASTA%\HANDOFF.md" >nul 2>&1
   echo   Manuais atualizados.

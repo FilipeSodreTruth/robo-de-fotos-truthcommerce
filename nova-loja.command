@@ -67,11 +67,29 @@ if grep -q "\[profiles.nuvemshop\]" "$HOME/.codex/config.toml" 2>/dev/null; then
   echo ""
 fi
 
+# modo de trabalho
+if [ -f ".modo" ]; then
+  MODO=$(cat .modo)
+  echo "  Modo desta loja: $MODO (definido antes)"
+else
+  echo ""
+  echo "  Como o codigo vai para a loja?"
+  echo "    [Enter] simples   - entrego o codigo, voce cola no painel"
+  echo "    [a]     avancado  - publico direto (precisa de token e CLI)"
+  read -p "  > " M
+  case "$M" in
+    a|A|avancado) MODO="modo-avancado" ;;
+    *)            MODO="modo-simples"  ;;
+  esac
+  echo "$MODO" > .modo
+fi
+
 # baixa a versão atual dos manuais, sempre
 echo "  Atualizando os manuais..."
-if curl -fsSL "$RAW/AGENTS.md" -o AGENTS.md.novo 2>/dev/null; then
+if curl -fsSL "$RAW/$MODO/AGENTS.md" -o AGENTS.md.novo 2>/dev/null; then
   mv AGENTS.md.novo AGENTS.md
-  curl -fsSL "$RAW/CLAUDE.md" -o CLAUDE.md
+  curl -fsSL "$RAW/$MODO/CLAUDE.md" -o CLAUDE.md
+  mkdir -p codigo/para-colar codigo/_anterior
   mkdir -p .claude
   curl -fsSL "$RAW/settings.json" -o .claude/settings.json
   [ -f "HANDOFF.md" ] || curl -fsSL "$RAW/HANDOFF-modelo.md" -o HANDOFF.md
