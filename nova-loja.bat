@@ -63,26 +63,25 @@ if not errorlevel 1 (
 
 if exist ".modo" (
   set /p MODO=<.modo
-  echo   Modo desta loja: %MODO% ^(definido antes^)
 ) else (
   echo.
   echo   Como o codigo vai para a loja?
   echo     [Enter] simples   - entrego o codigo, voce cola no painel
   echo     [a]     avancado  - publico direto ^(precisa de token e CLI^)
-  set M=
+  set "M="
   set /p M="  > "
-  set MODO=modo-simples
-  if /i "%M%"=="a" set MODO=modo-avancado
-  if /i "%M%"=="avancado" set MODO=modo-avancado
-  echo %MODO%> .modo
+  if /i "!M!"=="a" (set "MODO=modo-avancado") else (set "MODO=modo-simples")
+  >.modo echo !MODO!
 )
 
+echo   Modo desta loja: !MODO!
+
 echo   Atualizando os manuais...
-curl -fsSL "%RAW%/%MODO%/AGENTS.md" -o "%PASTA%\AGENTS.md.novo" >nul 2>&1
+curl -fsSL "%RAW%/!MODO!/AGENTS.md" -o "%PASTA%\AGENTS.md.novo" >nul 2>&1
 
 if exist "%PASTA%\AGENTS.md.novo" (
   move /y "%PASTA%\AGENTS.md.novo" "%PASTA%\AGENTS.md" >nul
-  curl -fsSL "%RAW%/%MODO%/CLAUDE.md" -o "%PASTA%\CLAUDE.md" >nul 2>&1
+  curl -fsSL "%RAW%/!MODO!/CLAUDE.md" -o "%PASTA%\CLAUDE.md" >nul 2>&1
   if not exist ".claude" mkdir ".claude"
   if not exist "codigo\para-colar" mkdir "codigo\para-colar"
   if not exist "codigo\_anterior" mkdir "codigo\_anterior"
@@ -109,18 +108,18 @@ set ESCOLHA=
 set /p ESCOLHA="  > "
 
 set AGENTE=codex
-if /i "%ESCOLHA%"=="c" set AGENTE=claude
-if /i "%ESCOLHA%"=="claude" set AGENTE=claude
+if /i "!ESCOLHA!"=="c" set "AGENTE=claude"
+if /i "!ESCOLHA!"=="claude" set "AGENTE=claude"
 
 echo.
-echo   Pronto. Abrindo o %AGENTE% nesta pasta:
+echo   Pronto. Abrindo o !AGENTE! nesta pasta:
 echo   %PASTA%
 echo.
 echo   Escreva o que voce quer mudar na loja. O agente conduz o resto.
 echo   ----------------------------------------
 echo.
 
-if "%AGENTE%"=="claude" (
+if "!AGENTE!"=="claude" (
   claude
 ) else (
   codex -p nuvemshop
