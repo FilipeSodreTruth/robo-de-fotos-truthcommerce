@@ -122,5 +122,5 @@ echo.
 if "!AGENTE!"=="claude" (
   claude
 ) else (
-  codex -p nuvemshop
+  codex -p nuvemshop --cd "%PASTA%"
 )

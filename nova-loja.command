@@ -129,5 +129,5 @@ echo ""
 if [ "$AGENTE" = "claude" ]; then
   exec claude
 else
-  exec codex -p nuvemshop
+  exec codex -p nuvemshop --cd "$PASTA"
 fi
