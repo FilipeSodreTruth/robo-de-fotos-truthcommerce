@@ -67,6 +67,26 @@ if grep -q "\[profiles.nuvemshop\]" "$HOME/.codex/config.toml" 2>/dev/null; then
   echo ""
 fi
 
+# navegador do Playwright: registra o servidor MCP e baixa o Chromium (uma vez por maquina)
+MARCA="$HOME/.codex/.playwright-pronto"
+if [ ! -f "$MARCA" ]; then
+  echo "  Preparando o navegador de teste (primeira vez, pode demorar)..."
+  if ! codex mcp list 2>/dev/null | grep -q playwright; then
+    codex mcp add playwright -- npx @playwright/mcp@latest >/dev/null 2>&1 \
+      && echo "  Servidor Playwright registrado no Codex." \
+      || echo "  Nao consegui registrar o Playwright no Codex - rode manualmente:
+     codex mcp add playwright -- npx @playwright/mcp@latest"
+  fi
+  if command -v claude >/dev/null 2>&1; then
+    claude mcp list 2>/dev/null | grep -q playwright || \
+      claude mcp add playwright npx @playwright/mcp@latest >/dev/null 2>&1
+  fi
+  npx --yes playwright install chromium >/dev/null 2>&1 \
+    && echo "  Navegador de teste instalado." \
+    || echo "  Aviso: nao consegui baixar o Chromium. Rode:  npx playwright install chromium"
+  touch "$MARCA"
+fi
+
 # modo de trabalho
 if [ -f ".modo" ]; then
   MODO=$(cat .modo)
@@ -74,7 +94,7 @@ if [ -f ".modo" ]; then
 else
   echo ""
   echo "  Como o codigo vai para a loja?"
-  echo "    [Enter] simples   - entrego o codigo, voce cola no painel"
+  echo "    [Enter] simples   - edito os arquivos, voce copia e cola no painel"
   echo "    [a]     avancado  - publico direto (precisa de token e CLI)"
   read -p "  > " M
   case "$M" in
@@ -89,7 +109,7 @@ echo "  Atualizando os manuais..."
 if curl -fsSL "$RAW/$MODO/AGENTS.md" -o AGENTS.md.novo 2>/dev/null; then
   mv AGENTS.md.novo AGENTS.md
   curl -fsSL "$RAW/$MODO/CLAUDE.md" -o CLAUDE.md
-  mkdir -p codigo/para-colar codigo/_anterior
+  mkdir -p codigo/_anterior
   mkdir -p .claude
   curl -fsSL "$RAW/settings.json" -o .claude/settings.json
   [ -f "HANDOFF.md" ] || curl -fsSL "$RAW/HANDOFF-modelo.md" -o HANDOFF.md

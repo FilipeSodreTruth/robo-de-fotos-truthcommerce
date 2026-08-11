@@ -61,12 +61,24 @@ if not errorlevel 1 (
   echo.
 )
 
+set MARCA=%USERPROFILE%\.codex\.playwright-pronto
+if not exist "%MARCA%" (
+  echo   Preparando o navegador de teste ^(primeira vez, pode demorar^)...
+  codex mcp list 2>nul | findstr /i playwright >nul 2>&1
+  if errorlevel 1 codex mcp add playwright -- npx @playwright/mcp@latest >nul 2>&1
+  where claude >nul 2>&1
+  if not errorlevel 1 claude mcp add playwright npx @playwright/mcp@latest >nul 2>&1
+  call npx --yes playwright install chromium >nul 2>&1
+  type nul > "%MARCA%"
+  echo   Navegador de teste pronto.
+)
+
 if exist ".modo" (
   set /p MODO=<.modo
 ) else (
   echo.
   echo   Como o codigo vai para a loja?
-  echo     [Enter] simples   - entrego o codigo, voce cola no painel
+  echo     [Enter] simples   - edito os arquivos, voce copia e cola no painel
   echo     [a]     avancado  - publico direto ^(precisa de token e CLI^)
   set "M="
   set /p M="  > "
@@ -83,7 +95,6 @@ if exist "%PASTA%\AGENTS.md.novo" (
   move /y "%PASTA%\AGENTS.md.novo" "%PASTA%\AGENTS.md" >nul
   curl -fsSL "%RAW%/!MODO!/CLAUDE.md" -o "%PASTA%\CLAUDE.md" >nul 2>&1
   if not exist ".claude" mkdir ".claude"
-  if not exist "codigo\para-colar" mkdir "codigo\para-colar"
   if not exist "codigo\_anterior" mkdir "codigo\_anterior"
   curl -fsSL "%RAW%/settings.json" -o "%PASTA%\.claude\settings.json" >nul 2>&1
   if not exist "HANDOFF.md" curl -fsSL "%RAW%/HANDOFF-modelo.md" -o "%PASTA%\HANDOFF.md" >nul 2>&1

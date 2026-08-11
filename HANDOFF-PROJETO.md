@@ -1,6 +1,6 @@
 # Handoff — Agente de layout Nuvemshop
 
-Estado do projeto em 2026-08-04. Este arquivo é para retomar o trabalho em outra sessão,
+Estado do projeto em 2026-08-11. Este arquivo é para retomar o trabalho em outra sessão,
 com outro agente ou outra pessoa.
 
 ## O que é
@@ -36,17 +36,17 @@ nova-loja.bat          script Windows
 reconhecer a página no Playwright → preview injetado ao vivo → aprovação do usuário → push →
 conferir no servidor → atualizar handoff → verificar no navegador.
 
-**Modo simples** — sem token, sem CLI. O agente só analisa a página pelo Playwright, escreve
-o código em arquivos locais e **entrega pronto** para o usuário colar no painel da Nuvemshop.
-Funciona em qualquer tema e em loja que ainda não tem o CLI liberado.
+**Modo simples** — sem token, sem CLI. O agente analisa a página pelo Playwright e **mantém
+dois arquivos de código** na pasta da loja; o usuário copia deles e cola no painel. Sem
+material intermediário, sem minificar, sem fatiar. Funciona em qualquer tema e em loja que
+ainda não tem o CLI liberado.
 
 Estrutura de arquivos do modo simples, por loja:
 
 ```
 codigo/
-  estilos.css        fonte da verdade do CSS, legível e comentado
-  scripts.html       fonte da verdade do JS/HTML
-  para-colar/        gerado a cada entrega, já minificado e fatiado em ≤500 chars
+  estilos.css        todo o CSS — é isto que o usuário copia
+  scripts.html       todo o JS/HTML — é isto que o usuário copia
   _anterior/         cópia da versão anterior, para reverter
 HANDOFF.md
 .modo                grava qual modo aquela loja usa
@@ -68,8 +68,17 @@ bloqueado; `theme push` exige confirmação. Instrução falha em sessão longa,
 publicado em vez de empilhar. Sem marcador não há edição confiável dentro de um `css_code`
 de 15 mil caracteres.
 
-**Blocos nomeados** (`JS - carrossel - home (1/3)`). Bloco órfão de versão anterior continua
-executando e quebra o console — não é sujeira, é bug.
+**Blocos nomeados** (`JS - carrossel - home`). O nome fica num campo `name` no mesmo nível de
+`type` e `settings` dentro do bloco — definível direto no JSON, sem editor visual (testado
+contra a API). Bloco órfão de versão anterior continua executando e quebra o console — não é
+sujeira, é bug.
+
+**Onde o código mora.** Seções e blocos ficam no JSON da página (`templates/home.json` e
+afins). O `settings_data.json` guarda as configurações globais, incluindo o CSS.
+
+**Limites reais.** CSS global ~15.000; bloco de código do rodapé ~50.000 — não 500, como
+constava antes. Na prática não é preciso dividir JS. O método para validar qualquer limite ou
+suposição: criar via API, editar, remover e conferir se o arquivo volta byte a byte.
 
 **HANDOFF.md por loja**, atualizado logo após a publicação subir e antes da verificação no
 navegador, para sobreviver a queda de terminal.
@@ -93,14 +102,13 @@ Alavanca de custo é o reasoning effort, não descer de tier. O CSS é a parte f
 
 ## Pendências
 
-- [ ] Subir os arquivos no repositório e **torná-lo público** (o `curl` dos scripts depende
-      disso; ainda dava 404 na última verificação)
-- [ ] Versão Windows do script com a escolha de modo (o Mac já tem; o `.bat` ficou para trás)
 - [ ] Confirmar a sintaxe de `rules`/execpolicy da versão instalada do Codex para bloquear
       `theme publish` — o perfil atual só cobre approval_policy e sandbox
-- [ ] Testar o `.bat` de ponta a ponta no Windows (nunca foi rodado)
+- [ ] Testar o `.bat` de ponta a ponta no Windows
 - [ ] Renomear o repositório
 - [ ] Auto-atualização do script (~10 linhas, evita gente com versão velha)
+- [ ] Validar por medição os limites de `css_code` e `custom_css` (nunca foram testados)
+- [ ] Biblioteca de componentes (ver abaixo)
 
 ## Armadilhas já encontradas
 
@@ -112,6 +120,16 @@ Alavanca de custo é o reasoning effort, não descer de tier. O CSS é a parte f
   em arquivo próprio: `~/.codex/nuvemshop.config.toml`.
 - **Codex sandbox:** `workspace-write` corta a rede por padrão. Sem `network_access = true`,
   o `npm install` e o CLI da Nuvemshop travam sem erro claro.
+- **Playwright no macOS:** Chromium lançado do terminal de dentro do sandbox do Codex morre
+  com `Operation not permitted`. Só o caminho MCP funciona, porque o servidor roda fora do
+  sandbox. Nunca instalar `playwright` na pasta do cliente — os scripts registram o servidor
+  (`codex mcp add playwright -- npx @playwright/mcp@latest`) e baixam o Chromium uma vez por
+  máquina. `playwright` e `@playwright/mcp` são pacotes distintos, e registrar o servidor não
+  vale para a sessão já aberta: é preciso reabrir o agente.
+- **Codex e diretório:** sem `--cd`, o Codex abre no diretório de onde foi chamado e não acha
+  o `AGENTS.md`. Os scripts passam o caminho explicitamente.
+- **Codex perfis:** `[profiles.x]` dentro do `config.toml` foi descontinuado; o perfil vai em
+  `~/.codex/nuvemshop.config.toml`.
 
 ## Próximo passo combinado: biblioteca de componentes
 
