@@ -1,163 +1,181 @@
 # Handoff — Agente de layout Nuvemshop
 
-Estado do projeto em 2026-08-11. Este arquivo é para retomar o trabalho em outra sessão,
-com outro agente ou outra pessoa.
+Estado do projeto em 2026-08-13. Para retomar o trabalho em outra sessão, com outro agente
+ou outra pessoa.
+
+Repositório: `github.com/FilipeSodreTruth/robo-de-fotos-truthcommerce` (público, branch `main`).
+O nome não descreve o projeto — renomear continua pendente.
 
 ## O que é
 
-Um conjunto de manuais + scripts que permite ao time da Truth Commerce aplicar CSS/JS/HTML
-em temas Nuvemshop usando um agente de IA (Codex ou Claude Code), sem que a pessoa precise
-saber programar.
-
-Repositório: `github.com/FilipeSodreTruth/robo-de-fotos-truthcommerce`
-(o nome não descreve o projeto — considerar renomear para algo como `agente-layout-nuvemshop`)
+Manuais + scripts que permitem ao time da Truth Commerce aplicar CSS/JS/HTML em temas
+Nuvemshop usando um agente de IA (Codex ou Claude Code), sem que a pessoa precise saber
+programar nem ter editor de código instalado.
 
 ## Estrutura do repositório
 
 ```
-modo-simples/          manuais do modo sem CLI/token
-  AGENTS.md            versão Codex
-  CLAUDE.md            versão Claude Code
-modo-avancado/         manuais do modo com CLI/push direto
-  AGENTS.md
-  CLAUDE.md
-settings.json          permissões do Claude Code (copiado para .claude/ da loja)
+COMECE-AQUI.md                guia do usuário final (não técnico)
+HANDOFF-PROJETO.md            este arquivo
+HANDOFF-modelo.md             template do handoff por loja
+settings.json                 permissões do Claude Code
 codex-config-nuvemshop.toml   referência do perfil do Codex
-HANDOFF-modelo.md      template do handoff por loja
-COMECE-AQUI.md         guia do usuário final (não técnico)
-nova-loja.command      script Mac
-nova-loja.bat          script Windows
+nova-loja.command / .bat      scripts de duplo clique (Mac / Windows)
+modo-simples/   AGENTS.md + CLAUDE.md
+modo-avancado/  AGENTS.md + CLAUDE.md
 ```
+
+Os manuais são baixados a cada execução do script — editar no GitHub propaga para todo mundo
+na próxima abertura. Só o script em si não se auto-atualiza (pendência).
 
 ## Os dois modos
 
-**Modo avançado** — o agente tem token e CLI da Nuvemshop, publica direto via
-`tiendanube theme push`. Fluxo: instalar ferramentas → obter token → pull do tema inteiro →
-reconhecer a página no Playwright → preview injetado ao vivo → aprovação do usuário → push →
-conferir no servidor → atualizar handoff → verificar no navegador.
+**Modo CLI (`modo-avancado/`)** — token + CLI tiendanube, publica via `theme push`. Pressupõe
+tema com seções e blocos `custom_code`: hoje **só o Ipanema**. Fluxo: verificar ferramentas →
+token → pull do tema → reconhecer no Playwright → preview injetado → aprovação → push →
+conferir no servidor → registrar → verificar no navegador.
 
-**Modo simples** — sem token, sem CLI. O agente analisa a página pelo Playwright e **mantém
-dois arquivos de código** na pasta da loja; o usuário copia deles e cola no painel. Sem
-material intermediário, sem minificar, sem fatiar. Funciona em qualquer tema e em loja que
-ainda não tem o CLI liberado.
+**Modo simples (`modo-simples/`)** — sem token, sem CLI, para temas clássicos. O agente
+analisa a página pelo Playwright e mantém dois arquivos na pasta do cliente; **entrega o
+código pela área de transferência** (`pbcopy` / `type … | clip`), e o usuário cola no painel.
+Ninguém abre arquivo — o time não tem VS Code.
 
-Estrutura de arquivos do modo simples, por loja:
+**Exatamente dois destinos no modo simples:** campo de CSS personalizado e rodapé (HTML +
+`<script>`). Não existem blocos numerados nem seção "Personalizada" — isso é do modo CLI, e o
+vazamento desse vocabulário entre os manuais já causou erro na prática. Cada manual agora
+declara seu escopo no topo.
+
+Estrutura por loja no modo simples:
 
 ```
 codigo/
-  estilos.css        todo o CSS — é isto que o usuário copia
-  scripts.html       todo o JS/HTML — é isto que o usuário copia
-  _anterior/         cópia da versão anterior, para reverter
+  estilos.css     todo o CSS — o usuário copia inteiro
+  scripts.html    todo o JS/HTML — o usuário copia inteiro
+  _anterior/      versão anterior, para reverter
 HANDOFF.md
-.modo                grava qual modo aquela loja usa
+.modo             grava o modo daquela loja (não pergunta de novo)
 ```
-
-O modo é escolhido na primeira vez que a loja é aberta e fica gravado — não pergunta de novo.
 
 ## Decisões de desenho (o porquê)
 
-**Dois portões de aprovação.** O agente mostra o preview ao vivo e para; só publica depois do
-"ok". No Codex isso precisou de override explícito, porque o modelo é treinado para persistir
-até resolver e atropelaria a espera.
+**Dois portões de aprovação.** No Codex isso exigiu override explícito, porque o modelo é
+treinado para persistir até resolver e atropelaria a espera.
 
-**Regras críticas em duas camadas.** O manual diz ao agente o que não fazer; as permissões
-(`settings.json` no Claude Code, perfil no Codex) impedem de fato. `theme publish` está
-bloqueado; `theme push` exige confirmação. Instrução falha em sessão longa, permissão não.
+**Regras críticas em duas camadas.** Manual instrui; permissões impedem. `theme publish`
+bloqueado, `theme push` com confirmação. Instrução falha em sessão longa, permissão não.
 
-**Sentinelas no CSS** (`/* @agente inicio: <slug> */`) para permitir substituir código
-publicado em vez de empilhar. Sem marcador não há edição confiável dentro de um `css_code`
-de 15 mil caracteres.
+**Sentinelas no CSS** (`/* @agente inicio: <slug> */`) para substituir em vez de empilhar.
 
-**Blocos nomeados** (`JS - carrossel - home`). O nome fica num campo `name` no mesmo nível de
-`type` e `settings` dentro do bloco — definível direto no JSON, sem editor visual (testado
-contra a API). Bloco órfão de versão anterior continua executando e quebra o console — não é
-sujeira, é bug.
+**Arquivo como fonte da verdade.** Como o usuário cola o arquivo inteiro, substituindo, não
+existe caminho para acumular código morto. Ideia do Filipe.
 
-**Onde o código mora.** Seções e blocos ficam no JSON da página (`templates/home.json` e
-afins). O `settings_data.json` guarda as configurações globais, incluindo o CSS.
+**Registro contínuo no handoff** (regra inviolável). Escrever no momento em que a informação
+aparece, não no fim. Teste: *se esta sessão morresse agora, outra pessoa continuaria só com o
+arquivo?* Gatilhos: publicação confirmada, decisão do usuário sobre **como** trabalhar,
+armadilha do tema descoberta, falha com causa identificada, antes de espera longa.
 
-**Limites reais.** CSS global ~15.000; bloco de código do rodapé ~50.000 — não 500, como
-constava antes. Na prática não é preciso dividir JS. O método para validar qualquer limite ou
-suposição: criar via API, editar, remover e conferir se o arquivo volta byte a byte.
+**`HANDOFF.md` por loja tem três seções:** *Decisões e preferências* (vale para sempre),
+*Armadilhas deste tema*, *Histórico*. Decisão sobre método não envelhece junto com o log.
 
-**HANDOFF.md por loja**, atualizado logo após a publicação subir e antes da verificação no
-navegador, para sobreviver a queda de terminal.
+**Manuais enxutos.** Foram cortados ~55% (CLI: 28k → 11,5k caracteres; simples: 20k → 10k).
+Prompt longo dispersa o modelo. Regras ficam no topo e não se repetem nos passos.
 
-**Backup por cliente** (`../<pasta>-backup`), nunca compartilhado — backup compartilhado
-publicaria o tema da loja errada numa restauração.
+**Backup por cliente** (`../<pasta>-backup`), nunca compartilhado.
 
-**Manuais baixados a cada execução.** Editar o manual no repositório propaga para todo mundo
-na próxima abertura. Só o script em si não se auto-atualiza.
+## Fatos técnicos confirmados
 
-## Modelos recomendados
+- **Nome do bloco:** campo `name` **no mesmo nível de `type` e `settings`**, não dentro de
+  `settings`. Definível direto no JSON, sem editor visual — testado contra a API.
+- **Limites:** CSS global ~15.000; bloco de código do rodapé **~50.000** (oficial na doc, não
+  500 como constava antes). Na prática nunca é preciso dividir JS.
+- **Onde mora:** seções e blocos ficam no JSON da página (`templates/home.json` e afins). O
+  `settings_data.json` guarda configurações globais, incluindo o CSS.
+- **Método para validar limites:** criar via API, editar, remover, conferir se o arquivo volta
+  byte a byte. Os ~15.000 do CSS e ~5.000 do `custom_css` nunca foram medidos assim.
 
-| Uso | Codex | Claude |
-|---|---|---|
-| Ajuste simples, tema conhecido | `gpt-5.6-terra` medium | Sonnet 5 medium |
-| Padrão | `gpt-5.6-sol` medium | Sonnet 5 high |
-| Bug difícil, JS complexo | `gpt-5.6-sol` high | Opus 5 high |
+## Armadilhas já encontradas (custaram tempo)
 
-Alavanca de custo é o reasoning effort, não descer de tier. O CSS é a parte fácil; o difícil
-é o loop agêntico, e modelo fraco erra o loop.
+- **Playwright no macOS:** Chromium lançado do terminal dentro do sandbox do Codex morre com
+  `Operation not permitted`. **Só o caminho MCP funciona** (o servidor roda fora do sandbox).
+  Nunca instalar `playwright` na pasta do cliente. `playwright` e `@playwright/mcp` são
+  pacotes distintos. Registrar o servidor não vale para a sessão já aberta — reabrir o agente.
+  Os scripts hoje registram e baixam o Chromium na primeira execução.
+- **Codex perfis:** `[profiles.x]` dentro do `config.toml` foi descontinuado — o perfil vai em
+  `~/.codex/nuvemshop.config.toml`. Bloco antigo faz o `-p` falhar; os scripts avisam.
+- **Codex sandbox:** `workspace-write` corta a rede por padrão. Sem `network_access = true`, o
+  `npm install` e o CLI travam sem erro claro.
+- **Codex e diretório:** sem `--cd`, abre onde foi chamado e não acha o `AGENTS.md`.
+- **`.bat`:** variável definida dentro de bloco `if` precisa de expansão atrasada (`!MODO!`).
+- **PowerShell:** `curl` é apelido do `Invoke-WebRequest` — usar `curl.exe`, e
+  `[Environment]::GetFolderPath('Desktop')` no lugar de `%USERPROFILE%`.
+- **Mac:** arquivo baixado pelo navegador vem sem permissão de execução e com quarentena. A
+  instalação por `curl` + `chmod +x` resolve os dois.
+- **Upload no GitHub:** arrastar pasta aninhada cria o caminho inteiro no repositório. Usar
+  *Add file → Create new file* digitando `modo-simples/AGENTS.md`.
+
+## Pesquisa na documentação oficial (nuvemshop.dev, ago/2026)
+
+**Não existe changelog de temas.** O changelog do site é só de API e reflete mudanças na
+documentação, não na API. Nada sobre seções ou layout no último ano.
+
+**Achado mais importante — o CLI tem fluxo FTP para temas não-Ipanema.** O Fork workflow (token
++ API REST) suporta apenas o Ipanema; para os outros temas existe o Fluxo FTP, que baixa, envia
+e monitora arquivos. Ou seja: **o modo simples poderia publicar automaticamente**, e o
+copia-e-cola deixaria de existir. Não testado ainda — é a próxima coisa a fazer.
+
+**Bloco `code`:** tem a tag `"general"`, então entra em qualquer seção que aceite blocos
+genéricos — não precisa de seção "Personalizada". O manual do modo CLI ainda não reflete isso.
+
+**Ipanema é o único tema seccionável disponível** — a separação em dois modos está
+estruturalmente correta e deve continuar valendo por um tempo.
+
+**Outros caminhos, para projeto futuro (não este agente):** NubeSDK executa código de terceiros
+na vitrine e no checkout; a Scripts API (`POST /scripts`) injeta JS via API. Ambos exigem app
+registrado no Partners Portal e homologação. É o único jeito de mexer no **checkout** — serviço
+vendável que a concorrência provavelmente não oferece.
+
+**MCP oficial da Nuvemshop** (`https://admin-mcp.nuvemshop.com.br/mcp`): 28 tools de catálogo,
+pedidos, cupons e promoções. **Não faz layout.** Toda escrita atua sobre a loja publicada e
+fica visível na hora — precisaria dos mesmos portões de aprovação.
+
+**Do changelog, relevante à operação (não a layout):** tabelas de preço por cliente (B2B),
+kits no catálogo, visibilidade de categoria, API de blog, e — atenção — o **timeout de webhook
+caiu de 10s para 3s**, o que pode estar quebrando automação n8n sem ninguém perceber.
 
 ## Pendências
 
-- [ ] Confirmar a sintaxe de `rules`/execpolicy da versão instalada do Codex para bloquear
-      `theme publish` — o perfil atual só cobre approval_policy e sandbox
+- [ ] Testar o fluxo FTP do CLI num tema clássico — se funcionar, reescrever os passos de
+      entrega do modo simples
+- [ ] Corrigir o manual do modo CLI: bloco `code` cabe em qualquer seção com tag "general"
+- [ ] Confirmar a sintaxe de `rules`/execpolicy do Codex para bloquear `theme publish`
 - [ ] Testar o `.bat` de ponta a ponta no Windows
 - [ ] Renomear o repositório
-- [ ] Auto-atualização do script (~10 linhas, evita gente com versão velha)
-- [ ] Validar por medição os limites de `css_code` e `custom_css` (nunca foram testados)
-- [ ] Biblioteca de componentes (ver abaixo)
-
-## Armadilhas já encontradas
-
-- **Mac:** arquivo baixado pelo navegador vem sem permissão de execução. A instalação usa
-  `curl` + `chmod +x`, que também evita o bloqueio do Gatekeeper.
-- **Windows:** `curl` no PowerShell é apelido do `Invoke-WebRequest`. Precisa ser `curl.exe`,
-  e `%USERPROFILE%` não expande — usar `[Environment]::GetFolderPath('Desktop')`.
-- **Codex:** versões atuais não aceitam `[profiles.x]` dentro do `config.toml`. O perfil vai
-  em arquivo próprio: `~/.codex/nuvemshop.config.toml`.
-- **Codex sandbox:** `workspace-write` corta a rede por padrão. Sem `network_access = true`,
-  o `npm install` e o CLI da Nuvemshop travam sem erro claro.
-- **Playwright no macOS:** Chromium lançado do terminal de dentro do sandbox do Codex morre
-  com `Operation not permitted`. Só o caminho MCP funciona, porque o servidor roda fora do
-  sandbox. Nunca instalar `playwright` na pasta do cliente — os scripts registram o servidor
-  (`codex mcp add playwright -- npx @playwright/mcp@latest`) e baixam o Chromium uma vez por
-  máquina. `playwright` e `@playwright/mcp` são pacotes distintos, e registrar o servidor não
-  vale para a sessão já aberta: é preciso reabrir o agente.
-- **Codex e diretório:** sem `--cd`, o Codex abre no diretório de onde foi chamado e não acha
-  o `AGENTS.md`. Os scripts passam o caminho explicitamente.
-- **Codex perfis:** `[profiles.x]` dentro do `config.toml` foi descontinuado; o perfil vai em
-  `~/.codex/nuvemshop.config.toml`.
+- [ ] Auto-atualização do script (~10 linhas)
+- [ ] Validar por medição os limites de `css_code` e `custom_css`
+- [ ] Verificar o timeout de 3s nos webhooks do n8n
+- [ ] Biblioteca de componentes (abaixo)
 
 ## Próximo passo combinado: biblioteca de componentes
 
-A ideia acordada (ainda não construída). O objetivo é entregar coisas que a Nuvemshop não faz
-nativo — carrossel 3D, banner com hotspot, hover magnético, reveal de card — sem redescobrir
-cada uma a cada cliente.
-
-Estrutura proposta:
+Acordado, não construído. Objetivo: entregar o que a Nuvemshop não faz nativo — carrossel 3D,
+banner com hotspot, hover magnético, reveal de card — sem redescobrir a cada cliente.
 
 ```
-biblioteca/
-  carrossel-3d/
-    README.md          o que faz, quando usa, quando NÃO usa
-    fonte.html         código legível e comentado
-    para-colar/        já minificado e fatiado
-    demo.html          funcionando, para mostrar ao cliente
-  banner-hotspot/
-  botao-hover-magnetico/
+biblioteca/<componente>/
+  README.md      o que faz, quando usa, quando NÃO usa
+  fonte.html     código legível e comentado
+  demo.html      funcionando, para mostrar ao cliente
 ```
 
-Mais uma página de vitrine com todos rodando ao vivo, para o cliente apontar o que quer.
+Mais uma página de vitrine com todos rodando ao vivo, para o cliente apontar o que quer — isso
+resolve a etapa de "ter ideia sob pressão" e vira argumento de venda.
 
-Restrição que define as escolhas técnicas: CSS puro cabe folgado nos 15.000 caracteres;
-`scroll-snap` + `perspective` + `rotateY` dá carrossel 3D sem JS; hotspot é posicionamento
-absoluto com `:hover`/`:focus`. Swiper, GSAP e three.js estouram os blocos de 500 e pesam no
-mobile — evitar.
+Restrição que guia as escolhas técnicas: CSS puro cabe folgado nos limites. `scroll-snap` +
+`perspective` + `rotateY` dá carrossel 3D sem JS; hotspot é posicionamento absoluto com
+`:hover`/`:focus`. Swiper, GSAP e three.js pesam no mobile — evitar.
 
-Fontes de repertório: CodePen, Codrops, Awwwards. Conferir licença antes de reaproveitar e
-testar em toque, porque muito efeito assume mouse.
+Fontes: CodePen, Codrops, Awwwards. Conferir licença e testar em toque (muito efeito assume
+mouse).
 
-Os três primeiros a construir: carrossel 3D, banner hotspot, efeito de card.
+Posição do Filipe sobre design: fugir do óbvio é o que diferencia os sites; buscar inspiração
+e aplicar é parte necessária do processo, não um extra.

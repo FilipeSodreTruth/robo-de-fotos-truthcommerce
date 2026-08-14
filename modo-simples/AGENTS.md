@@ -5,6 +5,11 @@ pelo navegador, mostra o resultado ao vivo e mantém dois arquivos de código na
 o usuário copia deles e cola no painel da Nuvemshop. Vale para qualquer tema, inclusive lojas sem
 CLI liberado.
 
+**Existem exatamente dois destinos:** o campo de CSS personalizado e o rodapé (que aceita HTML e
+`<script>`). Um arquivo para cada. Este modo não usa blocos de código numerados, seções
+"Personalizada" nem nada específico do tema Ipanema — isso é do modo CLI. Se algo no seu raciocínio
+apontar para criar um bloco, você saiu do modo simples.
+
 Quem está do outro lado normalmente não é técnico: sabe o resultado visual que quer, não sabe o
 que é CSS. Conduza em português claro.
 
@@ -113,11 +118,29 @@ Legível e comentado — é o que o usuário vai copiar.
 Pergunte "É este o resultado?" e **pare**. Ajustes: refine, atualize os arquivos, injete de
 novo na mesma aba.
 
-**06 · Avisar o que copiar.** Os arquivos são o material — não gere versão minificada, fatiada
-ou intermediária. Conte os caracteres contra os limites da referência e avise se passar de 80%.
-Então, em duas ou três linhas: qual arquivo mudou, que ele copie **inteiro** substituindo o que
-está no painel, e o nome que um bloco novo de JS deve receber. Se a versão nova deixou de usar
-um bloco que existia, diga qual **apagar** — bloco órfão continua executando e quebra o console.
+**06 · Entregar pela área de transferência.** Os arquivos são o material — não gere versão
+minificada, fatiada ou intermediária. Conte os caracteres contra os limites da referência e avise
+se passar de 80%.
+
+O usuário não deve precisar abrir arquivo nenhum. Copie o conteúdo direto para a área de
+transferência dele:
+
+```bash
+pbcopy < codigo/estilos.css                 # macOS
+type codigo\estilos.css | clip              # Windows
+xclip -selection clipboard < codigo/estilos.css   # Linux
+```
+
+Copie **um arquivo por vez** e diga qual está na memória agora. Se os dois mudaram, entregue o
+CSS, espere ele colar, e só então copie o `scripts.html`.
+
+Se o comando falhar (sem permissão, sem `xclip`), abra o arquivo no editor padrão como plano B —
+`open -e <arquivo>` no macOS, `notepad <arquivo>` no Windows — e diga para ele selecionar tudo e
+copiar. Nunca peça para ele "procurar o arquivo".
+
+Então, em duas ou três linhas: que o CSS já está copiado e é só colar no campo do painel
+**substituindo tudo**. Só existem dois destinos neste modo (ver referência) — diga em qual deles
+o conteúdo vai.
 
 **07 · Esperar.** Aguarde ele confirmar que colou e salvou. Não declare nada publicado antes.
 Se ele não achar o campo, descreva pelo nome e pergunte o que ele está vendo — não invente
@@ -126,14 +149,16 @@ caminho de cliques no painel.
 **08 · Verificar.** Recarregue na mesma aba com novo `?cb=` (limpa o preview injetado).
 `browser_console_messages` limpo; `browser_evaluate` confirmando que o código chegou;
 screenshot. Relatório em três linhas: chegou? console limpo? efeito visível? Se falhou, diga o
-erro literal. Causa mais comum: bloco colado pela metade ou bloco antigo não apagado.
+erro literal. Causa mais comum: conteúdo colado pela metade, ou colado ao lado do antigo em vez
+de substituí-lo.
 
 **09 · Registrar.** Atualize o `HANDOFF.md` (ver regra 5).
 
 ## Emergência · quebrou depois de colar
 
 Restaure primeiro, investigue depois. Peça para ele colar de volta `codigo/_anterior/estilos.css`
-no campo de CSS, substituindo tudo. Se for JS, o caminho rápido é apagar os blocos. Confirme na
+no campo de CSS, substituindo tudo. Se for JS, o caminho rápido é esvaziar o campo do rodapé.
+Confirme na
 mesma aba que voltou. Se `_anterior/` não existir, oriente a apagar o trecho entre as sentinelas
 do slug.
 
@@ -149,15 +174,22 @@ Ao explicar, evite jargão: "aumentei o espaçamento entre os cards", não "ajus
 
 ## Referência
 
-| Onde | Limite aproximado |
-|---|---|
-| Campo de CSS global | ~15.000 |
-| CSS de uma seção | ~5.000 |
-| Bloco de código no rodapé | ~50.000 |
+Este modo trabalha com **dois destinos**, e só eles:
 
-Empíricos, variam por campo e tema. O rodapé é folgado e carrega em todas as páginas — prefira
-ele para JS e evite dividir. Só divida se um campo recusar; nesse caso, minifique e concatene
-numa variável, executando no último pedaço.
+| Arquivo | Destino no painel | Limite aproximado |
+|---|---|---|
+| `codigo/estilos.css` | campo de CSS personalizado | ~15.000 |
+| `codigo/scripts.html` | rodapé (aceita HTML e `<script>`) | ~50.000 |
+
+Um arquivo, um campo, sempre colado inteiro. Não invente seções, blocos numerados ou lugares
+adicionais: os temas usados aqui não têm isso, e o modo CLI é que trabalha com blocos.
+
+Se o tema desta loja oferecer algum outro campo de código, **pergunte ao usuário** antes de usar —
+não deduza pela estrutura de outro tema.
+
+Os limites são empíricos e variam por tema. O rodapé é folgado e carrega em todas as páginas, e
+comporta praticamente qualquer JS — não divida código. Se um campo recusar o tamanho, avise o
+usuário em vez de fatiar por conta própria.
 
 ```
 codigo/
@@ -176,8 +208,8 @@ Cabeçalho dos dois arquivos-fonte:
 
 **`HANDOFF.md`** tem três seções: *Decisões e preferências* (como trabalhar; vale para sempre),
 *Armadilhas deste tema* e *Histórico* (uma entrada por entrega, recentes no topo). Decisão do
-cliente não vai no histórico. Entrada do histórico: o que mudou, slug, onde, blocos existentes
-agora com nomes exatos, estado.
+cliente não vai no histórico. Entrada do histórico: o que mudou, slug, em qual dos dois campos
+foi colado, estado.
 
 
 ## Exemplos
@@ -194,11 +226,10 @@ E encerra o turno.
 
 **Aviso do que copiar.** Depois do "ok":
 
-> Já está salvo. Abra `codigo/estilos.css`, copie o arquivo inteiro e cole no campo de CSS do
-> painel, apagando o que estiver lá — ele já contém tudo, inclusive o que fizemos antes.
+> Pronto — o CSS já está na sua área de transferência. Vá no campo de CSS do painel, selecione
+> tudo o que está lá, apague, e cole (Cmd+V / Ctrl+V). O que copiei já contém tudo, inclusive o
+> que fizemos antes.
 >
-> Atenção: existe um bloco `JS - carrossel - home (3/3)` de uma versão antiga na seção de código
-> personalizado. Apague ele, senão o site executa código pela metade.
 >
 > Quando salvar, me avisa que eu confiro.
 

@@ -111,6 +111,14 @@ da tela e cola no chat.
 Ele abre um navegador, mostra a mudança acontecendo e pergunta se pode publicar. Enquanto
 você não responder, **nada foi para a loja de verdade**.
 
+## 7. Cole no painel (só no modo simples)
+
+Depois do seu ok, ele **copia o código para a sua área de transferência** e avisa. Você vai no
+campo do painel da Nuvemshop, apaga o que está lá e cola (Cmd+V no Mac, Ctrl+V no Windows).
+
+Não precisa abrir arquivo nem procurar nada. Se copiar outra coisa antes de colar e perder o
+que estava na memória, é só pedir: "copia de novo".
+
 ---
 
 # O que você NÃO precisa fazer
@@ -118,7 +126,8 @@ você não responder, **nada foi para a loja de verdade**.
 - ❌ Entrar no GitHub
 - ❌ Baixar arquivos manualmente
 - ❌ Criar pasta
-- ❌ Abrir ou editar os arquivos `.md` que aparecem na pasta do cliente — são do agente
+- ❌ Abrir ou editar qualquer arquivo da pasta do cliente — são todos do agente
+- ❌ Instalar editor de código
 - ❌ Digitar comandos no Terminal (depois da instalação)
 - ❌ Saber o que é `settings_data.json`, CSS ou tema
 
