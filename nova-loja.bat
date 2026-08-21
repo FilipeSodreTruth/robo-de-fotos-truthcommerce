@@ -1,14 +1,11 @@
 @echo off
 REM ============================================================
 REM   Nova loja - Windows
-REM   Duplo clique neste arquivo. Ele cria a pasta do cliente,
-REM   baixa a versao mais recente dos manuais e abre o Codex.
+REM   Duplo clique. Cria a pasta do cliente, baixa a versao mais
+REM   recente dos manuais do repositorio e abre o agente.
 REM ============================================================
 
-REM Endereco dos manuais (o repositorio precisa estar PUBLICO)
 set RAW=https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main
-
-REM Onde as pastas dos clientes ficam
 set BASE=%USERPROFILE%\nuvemshop-lojas
 
 setlocal enabledelayedexpansion
@@ -61,17 +58,49 @@ if not errorlevel 1 (
   echo.
 )
 
-set MARCA=%USERPROFILE%\.codex\.playwright-pronto
-if not exist "%MARCA%" (
-  echo   Preparando o navegador de teste ^(primeira vez, pode demorar^)...
-  codex mcp list 2>nul | findstr /i playwright >nul 2>&1
-  if errorlevel 1 codex mcp add playwright -- npx @playwright/mcp@latest >nul 2>&1
-  where claude >nul 2>&1
-  if not errorlevel 1 claude mcp add playwright npx @playwright/mcp@latest >nul 2>&1
-  call npx --yes playwright install chromium >nul 2>&1
-  type nul > "%MARCA%"
-  echo   Navegador de teste pronto.
+REM ---------------------------------------------------------------
+REM  MCPs - registra so o que faltar, checando cada um por nome.
+REM ---------------------------------------------------------------
+
+REM Playwright (comando local, em cada agente)
+codex mcp list 2>nul | findstr /i playwright >nul 2>&1
+if errorlevel 1 (
+  echo   Registrando o navegador de teste no Codex...
+  codex mcp add playwright -- npx @playwright/mcp@latest >nul 2>&1
 )
+where claude >nul 2>&1
+if not errorlevel 1 (
+  claude mcp list 2>nul | findstr /i playwright >nul 2>&1
+  if errorlevel 1 claude mcp add playwright npx @playwright/mcp@latest >nul 2>&1
+)
+
+set MARCA_CHROMIUM=%USERPROFILE%\.codex\.chromium-baixado
+if not exist "%MARCA_CHROMIUM%" (
+  echo   Baixando o Chromium ^(primeira vez, pode demorar^)...
+  call npx --yes playwright install chromium >nul 2>&1
+  type nul > "%MARCA_CHROMIUM%"
+)
+
+REM A1 Gallery e MiroMiro (remotos por URL). MiroMiro e OAuth: navegador abre na 1a vez.
+call :registrar_design a1gallery https://www.a1.gallery/api/mcp
+call :registrar_design miromiro https://miromiro.app/mcp
+goto :depois_design
+
+:registrar_design
+where claude >nul 2>&1
+if not errorlevel 1 (
+  claude mcp list 2>nul | findstr /i %1 >nul 2>&1
+  if errorlevel 1 claude mcp add --transport http %1 %2 >nul 2>&1
+)
+codex mcp list 2>nul | findstr /i %1 >nul 2>&1
+if errorlevel 1 (
+  echo   Registrando %1 no Codex...
+  codex mcp add %1 --url %2 >nul 2>&1
+  if errorlevel 1 echo   Nao consegui registrar %1 no Codex. Rode 'codex mcp add --help' e registre na mao: %1 ^-^> %2
+)
+goto :eof
+
+:depois_design
 
 if exist ".modo" (
   set /p MODO=<.modo
@@ -85,7 +114,6 @@ if exist ".modo" (
   if /i "!M!"=="a" (set "MODO=modo-avancado") else (set "MODO=modo-simples")
   >.modo echo !MODO!
 )
-
 echo   Modo desta loja: !MODO!
 
 echo   Atualizando os manuais...

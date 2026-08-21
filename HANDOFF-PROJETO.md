@@ -1,6 +1,6 @@
 # Handoff — Agente de layout Nuvemshop
 
-Estado do projeto em 2026-08-13. Para retomar o trabalho em outra sessão, com outro agente
+Estado do projeto em 2026-08-21. Para retomar o trabalho em outra sessão, com outro agente
 ou outra pessoa.
 
 Repositório: `github.com/FilipeSodreTruth/robo-de-fotos-truthcommerce` (público, branch `main`).
@@ -82,6 +82,11 @@ Prompt longo dispersa o modelo. Regras ficam no topo e não se repetem nos passo
 
 **Backup por cliente** (`../<pasta>-backup`), nunca compartilhado.
 
+**`browser_snapshot` só sob demanda.** Ele devolve a árvore de acessibilidade inteira — numa
+home de loja (4.600px de altura na Cutelaria) isso domina o custo de contexto da sessão. Quando
+o usuário já indicou o alvo, o agente vai direto ao `browser_evaluate` mirado. Foi assim que a
+sessão real identificou a seção, e custa uma fração.
+
 ## Fatos técnicos confirmados
 
 - **Nome do bloco:** campo `name` **no mesmo nível de `type` e `settings`**, não dentro de
@@ -142,17 +147,62 @@ fica visível na hora — precisaria dos mesmos portões de aprovação.
 kits no catálogo, visibilidade de categoria, API de blog, e — atenção — o **timeout de webhook
 caiu de 10s para 3s**, o que pode estar quebrando automação n8n sem ninguém perceber.
 
+## Pesquisa visual — A1 Gallery + MiroMiro (implementado e validado, ago/2026)
+
+Decidido **não** virar modo separado. A ideia de uma sessão à parte foi descartada: trocar de
+pasta no meio de um atendimento (fechar, reabrir, reexplicar) não compensa. Ficou como etapa
+condicional dentro dos manuais existentes — **simples e CLI**. Os dois MCPs são registrados de
+antemão pelo script; o agente decide na conversa quando usar.
+
+**Três ferramentas, três camadas — não concorrem:**
+- **A1 Gallery** acha a *direção* (busca por estilo; acervo de SaaS/landing). Só quando o
+  pedido é aberto, sem site nem print. Nunca determina cor/fonte da loja.
+- **MiroMiro** mede a *aparência* de um site concreto (estrutura, espaçamento, arredondamento,
+  cores, tipografia, CSS já calculado). Só quando há URL apontada e o pedido é "faz
+  igual/parecido".
+- **Playwright** mede o *comportamento* — o que o MiroMiro não pega: lógica de arraste, evento
+  de mouse, proporção de movimento, presença de scroll-snap.
+
+**Fluxo validado em produção** (um carrossel de arraste ficou fiel só na 3ª tentativa; as duas
+primeiras falharam por scroll-snap e captura de ponteiro que a referência não usava):
+A1 escolhe a referência → **Playwright localiza o seletor exato** da seção (senão o MiroMiro
+traz a página inteira) → MiroMiro extrai só aquela seção → Playwright inspeciona o JS e **mede
+a interação** → reconhece o tema da loja → importa só estrutura+comportamento → aplica cor/fonte
+da loja → preview → testa desktop/celular/console/movimento real → aprovação → publicação.
+
+**Regras novas que entraram nos quatro manuais:**
+- **Medir a interação, não só olhar.** "Se move, tá bom" falhou 3x. Mover o mouse X px e
+  comparar quantos px a referência rola e em quanto tempo (caso real: 240px→240px em ~140ms),
+  repetindo o teste na loja. É a versão de UI do "a mensagem do push não é prova".
+- **Não confiar no `accent_color` do tema.** Caso real: estava marrom, mas a identidade real da
+  loja era cinza + amarelo. A cor visível nos componentes manda, não o setting salvo.
+- **Reaproveitar componente nativo do tema** quando existir (ex.: Ipanema já tem seção de
+  depoimentos com Swiper) — mantém editável pelo painel e evita biblioteca extra.
+
+**Registro dos MCPs (confirmado contra `codex mcp list`):** o Codex separa MCP de comando
+local (Playwright: `codex mcp add playwright -- npx @playwright/mcp@latest`) do remoto por URL
+(`codex mcp add a1gallery --url https://www.a1.gallery/api/mcp`, idem miromiro). No Claude Code:
+`claude mcp add --transport http <nome> <url>`. **A1 não pede auth; MiroMiro é OAuth** — abre o
+navegador pedindo autorização na primeira vez (esperado; o COMECE-AQUI.md avisa o usuário final
+para não recusar). O script agora **checa cada MCP por nome e registra só o que falta** (nada de
+marcador único que pulava o bloco inteiro), então uma máquina com A1 mas sem MiroMiro se
+auto-repara na próxima abertura.
+
 ## Pendências
 
 - [ ] Testar o fluxo FTP do CLI num tema clássico — se funcionar, reescrever os passos de
       entrega do modo simples
 - [ ] Corrigir o manual do modo CLI: bloco `code` cabe em qualquer seção com tag "general"
 - [ ] Confirmar a sintaxe de `rules`/execpolicy do Codex para bloquear `theme publish`
-- [ ] Testar o `.bat` de ponta a ponta no Windows
+- [ ] Testar o `.bat` de ponta a ponta no Windows — inclui a sub-rotina nova `:registrar_design`
+      (registro per-MCP) e a tela de OAuth do MiroMiro; só o caminho do Codex no Mac foi testado
+      de verdade
 - [ ] Renomear o repositório
 - [ ] Auto-atualização do script (~10 linhas)
 - [ ] Validar por medição os limites de `css_code` e `custom_css`
 - [ ] Verificar o timeout de 3s nos webhooks do n8n
+- [ ] Designesy (auditoria de URL com nota A-F) — ainda não avaliado; MiroMiro e A1 já entraram.
+      Testar isolado, medindo se o resultado melhora, antes de somar (soma tools ao contexto)
 - [ ] Biblioteca de componentes (abaixo)
 
 ## Próximo passo combinado: biblioteca de componentes

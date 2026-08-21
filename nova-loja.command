@@ -1,8 +1,8 @@
 #!/bin/bash
 # ============================================================
 #  Nova loja — Mac
-#  Duplo clique neste arquivo. Ele cria a pasta do cliente,
-#  baixa a versão mais recente dos manuais e abre o Codex.
+#  Duplo clique. Cria a pasta do cliente, baixa a versão mais
+#  recente dos manuais do repositório e abre o agente.
 # ============================================================
 
 # Endereço dos manuais (o repositório precisa estar PÚBLICO)
@@ -26,10 +26,8 @@ if [ -z "$CLIENTE" ]; then
   exit 1
 fi
 
-# normaliza: minúsculas, espaços viram hífen
 CLIENTE=$(echo "$CLIENTE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 PASTA="$BASE/$CLIENTE"
-
 mkdir -p "$PASTA"
 cd "$PASTA"
 
@@ -41,11 +39,11 @@ else
   echo "  Criando a pasta do cliente."
 fi
 
-# garante o perfil de permissões do Codex, uma vez por máquina
+# perfil de permissões do Codex, uma vez por máquina
 mkdir -p "$HOME/.codex"
 PERFIL="$HOME/.codex/nuvemshop.config.toml"
 if [ ! -f "$PERFIL" ]; then
-  echo "  Configurando o perfil de permissoes do Codex (primeira vez)..."
+  echo "  Configurando o perfil de permissões do Codex (primeira vez)..."
   cat > "$PERFIL" <<'TOMLEOF'
 model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
@@ -57,8 +55,8 @@ network_access = true
 TOMLEOF
 fi
 
-# versoes antigas deste script gravavam o perfil dentro do config.toml,
-# formato que o Codex nao aceita mais junto com -p
+# versões antigas gravavam o perfil dentro do config.toml, formato que o Codex
+# não aceita mais junto com -p
 if grep -q "\[profiles.nuvemshop\]" "$HOME/.codex/config.toml" 2>/dev/null; then
   echo ""
   echo "  ATENCAO: existe um bloco antigo [profiles.nuvemshop] no seu"
@@ -67,35 +65,55 @@ if grep -q "\[profiles.nuvemshop\]" "$HOME/.codex/config.toml" 2>/dev/null; then
   echo ""
 fi
 
-# navegador do Playwright: registra o servidor MCP e baixa o Chromium (uma vez por maquina)
-MARCA="$HOME/.codex/.playwright-pronto"
-if [ ! -f "$MARCA" ]; then
-  echo "  Preparando o navegador de teste (primeira vez, pode demorar)..."
-  if ! codex mcp list 2>/dev/null | grep -q playwright; then
-    codex mcp add playwright -- npx @playwright/mcp@latest >/dev/null 2>&1 \
-      && echo "  Servidor Playwright registrado no Codex." \
-      || echo "  Nao consegui registrar o Playwright no Codex - rode manualmente:
-     codex mcp add playwright -- npx @playwright/mcp@latest"
-  fi
-  if command -v claude >/dev/null 2>&1; then
-    claude mcp list 2>/dev/null | grep -q playwright || \
-      claude mcp add playwright npx @playwright/mcp@latest >/dev/null 2>&1
-  fi
-  npx --yes playwright install chromium >/dev/null 2>&1 \
-    && echo "  Navegador de teste instalado." \
-    || echo "  Aviso: nao consegui baixar o Chromium. Rode:  npx playwright install chromium"
-  touch "$MARCA"
+# ---------------------------------------------------------------
+#  MCPs — registra só o que faltar, checando cada um por nome.
+#  Sem marcador único: assim uma máquina com um MCP mas sem outro
+#  se auto-repara na próxima abertura.
+# ---------------------------------------------------------------
+
+# Playwright (comando local, em cada agente)
+if ! codex mcp list 2>/dev/null | grep -q playwright; then
+  echo "  Registrando o navegador de teste no Codex..."
+  codex mcp add playwright -- npx @playwright/mcp@latest >/dev/null 2>&1
 fi
+if command -v claude >/dev/null 2>&1; then
+  claude mcp list 2>/dev/null | grep -q playwright || \
+    claude mcp add playwright npx @playwright/mcp@latest >/dev/null 2>&1
+fi
+
+# Chromium: download lento, marcador só para não repetir o download
+MARCA_CHROMIUM="$HOME/.codex/.chromium-baixado"
+if [ ! -f "$MARCA_CHROMIUM" ]; then
+  echo "  Baixando o Chromium (primeira vez, pode demorar)..."
+  npx --yes playwright install chromium >/dev/null 2>&1 && touch "$MARCA_CHROMIUM"
+fi
+
+# A1 Gallery e MiroMiro (servidores remotos por URL).
+# MiroMiro usa OAuth: na primeira vez o navegador abre pedindo autorização.
+registrar_design() {
+  local nome="$1" url="$2"
+  if command -v claude >/dev/null 2>&1; then
+    claude mcp list 2>/dev/null | grep -q "$nome" || \
+      claude mcp add --transport http "$nome" "$url" >/dev/null 2>&1
+  fi
+  if ! codex mcp list 2>/dev/null | grep -q "$nome"; then
+    echo "  Registrando $nome no Codex..."
+    codex mcp add "$nome" --url "$url" >/dev/null 2>&1 || \
+      echo "  Nao consegui registrar $nome no Codex. Rode 'codex mcp add --help' e registre na mao:
+     $nome  ->  $url"
+  fi
+}
+registrar_design a1gallery https://www.a1.gallery/api/mcp
+registrar_design miromiro  https://miromiro.app/mcp
 
 # modo de trabalho
 if [ -f ".modo" ]; then
   MODO=$(cat .modo)
-  echo "  Modo desta loja: $MODO (definido antes)"
 else
   echo ""
-  echo "  Como o codigo vai para a loja?"
-  echo "    [Enter] simples   - edito os arquivos, voce copia e cola no painel"
-  echo "    [a]     avancado  - publico direto (precisa de token e CLI)"
+  echo "  Como o código vai para a loja?"
+  echo "    [Enter] simples   - edito os arquivos, você copia e cola no painel"
+  echo "    [a]     avançado  - publico direto (precisa de token e CLI)"
   read -p "  > " M
   case "$M" in
     a|A|avancado) MODO="modo-avancado" ;;
@@ -103,14 +121,14 @@ else
   esac
   echo "$MODO" > .modo
 fi
+echo "  Modo desta loja: $MODO"
 
-# baixa a versão atual dos manuais, sempre
+# baixa a versão atual dos manuais do repositório
 echo "  Atualizando os manuais..."
 if curl -fsSL "$RAW/$MODO/AGENTS.md" -o AGENTS.md.novo 2>/dev/null; then
   mv AGENTS.md.novo AGENTS.md
   curl -fsSL "$RAW/$MODO/CLAUDE.md" -o CLAUDE.md
-  mkdir -p codigo/_anterior
-  mkdir -p .claude
+  mkdir -p codigo/_anterior .claude
   curl -fsSL "$RAW/settings.json" -o .claude/settings.json
   [ -f "HANDOFF.md" ] || curl -fsSL "$RAW/HANDOFF-modelo.md" -o HANDOFF.md
   echo "  Manuais atualizados."

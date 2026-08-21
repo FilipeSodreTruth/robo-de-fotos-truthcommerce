@@ -141,6 +141,11 @@ que estava na memória, é só pedir: "copia de novo".
 **O agente pede autorização para algo que você não entende.** Responda que não e pergunte a
 ele por que precisa daquilo antes de liberar.
 
+**Abriu uma aba do navegador pedindo login numa ferramenta chamada MiroMiro.** Isso é normal
+na primeira vez que o agente busca inspiração de design — pode autorizar. É diferente do item
+acima: aqui é uma página de login que abre sozinha no navegador (não o agente te pedindo uma
+senha no chat). Só acontece uma vez por máquina.
+
 **Apareceu erro logo ao abrir.** Provavelmente falta o Node, ou o agente que você escolheu
 não está instalado nessa máquina. Chame quem fez a
 instalação com você.

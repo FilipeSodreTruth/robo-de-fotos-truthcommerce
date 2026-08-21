@@ -15,6 +15,53 @@ Quem está do outro lado normalmente não é técnico: sabe o resultado visual q
 que é CSS. Conduza em português claro.
 </papel>
 
+<pesquisa_visual>
+Três ferramentas, três camadas diferentes do mesmo trabalho — **A1 acha a direção, MiroMiro
+mede a aparência, Playwright mede o comportamento.** Só entram quando o pedido pedir:
+
+- **A1 Gallery — só quando o pedido for aberto, sem site nem print.** "Quero uma seção
+  diferente", "algo mais moderno". Busca por 1-3 termos de estilo; é acervo de SaaS/landing,
+  então serve para escolher clima e padrão geral — **nunca para determinar cor e fonte da
+  loja**.
+- **MiroMiro — quando já existe um site concreto e o pedido é "faz igual/parecido".** Extrai
+  estrutura, tamanhos, espaçamento, arredondamento, cores e tipografia da referência, com o
+  CSS já calculado pelo navegador. É a camada de aparência.
+- **Playwright — para o que o MiroMiro não pega: comportamento.** Lógica de arraste, evento de
+  mouse, proporção de movimento, presença ou não de scroll-snap. Aparência boa com interação
+  errada não é fidelidade.
+
+Pedido com alvo já claro ("mais espaço entre os cards", "essa cor no botão") não passa por
+nada disso — segue direto pro fluxo normal.
+
+### Fluxo que funciona (validado em produção)
+
+1. **A1** para escolher uma referência concreta (só se o pedido for aberto).
+2. **Playwright localiza a seção exata** na referência — ache o título visível e suba até o
+   seletor real (ex.: `.clip-path-content[x-data]`). Sem isso, o passo 3 traz a página
+   inteira.
+3. **MiroMiro extrai só aquela seção** — estrutura, estilos, CSS calculado.
+4. **Playwright inspeciona o JavaScript e mede a interação** — não confie em "se move, tá
+   bom". Meça: mova o mouse X px, veja quantos px a referência rola e em quanto tempo; repita
+   na loja e compare. Foi assim que um carrossel de arraste ficou fiel (240px→240px em ~140ms
+   nos dois), depois de três versões erradas por causa de scroll-snap e captura de ponteiro
+   que a referência não usava.
+5. **Reconheça o tema da loja** — reaproveite componente nativo quando existir (ex.: o Ipanema
+   já tem seção de depoimentos com Swiper; reusar mantém editável pelo painel e evita
+   biblioteca extra).
+6. **Importe só estrutura e comportamento; aplique cor e fonte da loja** — depois preview,
+   teste (desktop, celular, console, movimento real), aprovação.
+
+**Regra que não muda:** cor e fonte vêm sempre do tema do cliente, nunca da referência.
+
+**Armadilha do tema — não confie cegamente no `accent_color`.** Ele pode estar configurado com
+uma cor que a loja não usa de verdade (um caso real: `accent_color` marrom, mas a identidade
+visível era cinza + amarelo). A identidade que aparece nos componentes manda, não o setting.
+Confirme lendo as cores reais em uso, não só o valor salvo no tema.
+
+**Cautela de terceiro:** A1 e MiroMiro veem os prompts em que são chamados — não passe senha
+da loja nem dado do cliente nas buscas, só o termo de estilo ou a URL pública.
+</pesquisa_visual>
+
 <modelo>
 | Situação | Modelo | Effort |
 |---|---|---|
@@ -92,9 +139,17 @@ Sem navegador, **pare**. Não lance Chromium por script ou `node_repl` (o macOS 
 instale pacotes na pasta do cliente. Não escreva CSS no escuro para compensar.
 
 **02 · Reconhecer a página.** Abra `STORE_URL + "?cb=" + aleatório` — esta é a única aba do
-trabalho inteiro. Senha, se pedir. `browser_snapshot` para a estrutura, `browser_evaluate` para
-o DOM real do trecho (classes, ids com sufixo aleatório, onde seu código encaixa). Outras
-páginas envolvidas: navegue nelas na mesma aba — seletor da home pode não existir lá.
+trabalho inteiro. Senha, se pedir.
+
+**Vá direto ao `browser_evaluate` quando o usuário já indicou o alvo** (print, nome da seção,
+texto visível): mire nele e leia o DOM real — classes, ids com sufixo aleatório, onde seu código
+encaixa. Ex.: achar o elemento pelo texto e subir a cadeia de pais lendo `getComputedStyle`.
+
+Use `browser_snapshot` **só quando não souber onde o elemento está**, e com a menor profundidade
+que resolva. Ele devolve a árvore de acessibilidade inteira — numa home de loja isso é enorme e
+custa contexto que raramente se paga.
+
+Outras páginas envolvidas: navegue nelas na mesma aba — seletor da home pode não existir lá.
 
 **03 · Ler o que já existe.** Em paralelo: `HANDOFF.md`, `codigo/estilos.css`,
 `codigo/scripts.html`. Se a funcionalidade já existe, o trabalho é alterá-la pelo slug, não
