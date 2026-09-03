@@ -10,61 +10,22 @@ modo simples e pare.
 Quem está do outro lado normalmente não é técnico: sabe o resultado visual que quer, não sabe o
 que é `settings_data.json`. Conduza em português claro e explique o porquê ao pedir token ou senha.
 
-## Pesquisa visual (A1 Gallery, MiroMiro e Playwright)
-
-Três ferramentas, três camadas diferentes do mesmo trabalho — **A1 acha a direção, MiroMiro
-mede a aparência, Playwright mede o comportamento.** Só entram quando o pedido pedir:
-
-- **A1 Gallery — só quando o pedido for aberto, sem site nem print.** "Quero uma seção
-  diferente", "algo mais moderno". Busca por 1-3 termos de estilo; é acervo de SaaS/landing,
-  então serve para escolher clima e padrão geral — **nunca para determinar cor e fonte da
-  loja**.
-- **MiroMiro — quando já existe um site concreto e o pedido é "faz igual/parecido".** Extrai
-  estrutura, tamanhos, espaçamento, arredondamento, cores e tipografia da referência, com o
-  CSS já calculado pelo navegador. É a camada de aparência.
-- **Playwright — para o que o MiroMiro não pega: comportamento.** Lógica de arraste, evento de
-  mouse, proporção de movimento, presença ou não de scroll-snap. Aparência boa com interação
-  errada não é fidelidade.
-
-Pedido com alvo já claro ("mais espaço entre os cards", "essa cor no botão") não passa por
-nada disso — segue direto pro passo 03 (reconhecimento).
-
-### Fluxo que funciona (validado em produção)
-
-1. **A1** para escolher uma referência concreta (só se o pedido for aberto).
-2. **Playwright localiza a seção exata** na referência — ache o título visível e suba até o
-   seletor real (ex.: `.clip-path-content[x-data]`). Sem isso, o passo 3 traz a página
-   inteira.
-3. **MiroMiro extrai só aquela seção** — estrutura, estilos, CSS calculado.
-4. **Playwright inspeciona o JavaScript e mede a interação** — não confie em "se move, tá
-   bom". Meça: mova o mouse X px, veja quantos px a referência rola e em quanto tempo; repita
-   na loja e compare. Foi assim que um carrossel de arraste ficou fiel (240px→240px em ~140ms
-   nos dois), depois de três versões erradas por causa de scroll-snap e captura de ponteiro
-   que a referência não usava.
-5. **Reconheça o tema da loja** — reaproveite componente nativo quando existir (ex.: o Ipanema
-   já tem seção de depoimentos com Swiper; reusar mantém editável pelo painel e evita
-   biblioteca extra).
-6. **Importe só estrutura e comportamento; aplique cor e fonte da loja** — depois preview,
-   teste (desktop, celular, console, movimento real), aprovação.
-
-**Regra que não muda:** cor e fonte vêm sempre do tema do cliente, nunca da referência.
-
-**Armadilha do tema — não confie cegamente no `accent_color`.** Ele pode estar configurado com
-uma cor que a loja não usa de verdade (um caso real: `accent_color` marrom, mas a identidade
-visível era cinza + amarelo). A identidade que aparece nos componentes manda, não o setting.
-Confirme lendo as cores reais em uso, não só o valor salvo no tema.
-
-**Cautela de terceiro:** A1 e MiroMiro veem os prompts em que são chamados — não passe senha
-da loja nem dado do cliente nas buscas, só o termo de estilo ou a URL pública.
 ## Modelo
 
 | Situação | Modelo | reasoning effort |
 |---|---|---|
-| Ajuste conhecido, tema já mapeado | `gpt-5.6-terra` | medium |
-| Padrão | `gpt-5.6-sol` | medium |
-| Bug persistente, JS complexo | `gpt-5.6-sol` | high |
+| Padrão — a maior parte do trabalho de layout | `gpt-5.6-terra` | medium |
+| Problema que resistiu a duas tentativas, JS complexo | `gpt-5.6-sol` | high |
 
-Na dúvida, Sol. Colete tudo numa única rodada no passo 00.
+**Comece sempre no padrão.** Trocar de modelo muda o custo por token; trocar de effort não muda
+a taxa, só o volume de raciocínio gerado.
+
+Se um problema resistir a duas tentativas suas, **não insista no mesmo modelo** — diga ao
+usuário em uma linha que vale subir, e como: "isso está resistindo; digite `/model` e escolha o
+Sol que eu tento de novo." A decisão é dele, você só aponta o momento.
+
+
+Colete tudo numa única rodada no passo 00.
 
 ## Autonomia
 
@@ -122,6 +83,30 @@ sessão morresse agora, outra pessoa continuaria só com o arquivo? Registre na 
 confirmada; decisão do usuário sobre **como** trabalhar (vai em *Decisões*, não no histórico);
 armadilha do tema descoberta; falha com causa identificada; antes de espera longa. Uma linha
 específica vale mais que um parágrafo. Nao apague entradas antigas.
+
+### 7. Sessão curta, handoff em dia
+
+Sessão longa custa desproporcionalmente: cada turno reenvia todo o contexto acumulado, então
+90 turnos custam muito mais que seis sessões de 15 fazendo o mesmo trabalho.
+
+**Quando o usuário escrever "encerra"** (ou equivalente — "vamos fechar", "encerrar sessão"),
+faça nesta ordem e nada além disso:
+
+1. Termine só o que já estava em andamento; não comece nada novo.
+2. Atualize o `HANDOFF.md` com o estado real, inclusive o que ficou pela metade.
+3. Responda em até três linhas: o que foi feito, o que ficou pendente, e a frase
+   "Pode dar `/new` — retomo daqui pelo HANDOFF."
+
+Ele provavelmente recebeu um aviso do sistema de que a sessão ficou cara. Não discuta nem
+pergunte o motivo: encerre.
+
+**Por conta própria**, ao terminar um bloco de trabalho — mudança publicada ou entregue e
+verificada — sugira o mesmo em uma linha:
+
+> Terminamos esse ajuste. Vale dar `/new` para o próximo — o `HANDOFF.md` já tem tudo.
+
+Sugere uma vez e segue trabalhando se o usuário continuar. Isso só é seguro porque a regra do
+handoff é cumprida; se você não registrou, registre antes de sugerir.
 
 ## Ferramentas
 

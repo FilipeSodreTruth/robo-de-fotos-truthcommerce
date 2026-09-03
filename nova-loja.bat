@@ -1,12 +1,40 @@
 @echo off
 REM ============================================================
 REM   Nova loja - Windows
-REM   Duplo clique. Cria a pasta do cliente, baixa a versao mais
-REM   recente dos manuais do repositorio e abre o agente.
+REM   Duplo clique neste arquivo. Ele cria a pasta do cliente,
+REM   baixa a versao mais recente dos manuais e abre o Codex.
 REM ============================================================
 
+REM Endereco dos manuais (o repositorio precisa estar PUBLICO)
 set RAW=https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main
+
+REM Onde as pastas dos clientes ficam
 set BASE=%USERPROFILE%\nuvemshop-lojas
+
+REM ------------------------------------------------------------
+REM  Auto-atualizacao: pega a versao mais nova deste proprio atalho.
+REM  O .bat e lido linha a linha do disco, entao trocamos o arquivo
+REM  e reabrimos numa janela nova em vez de continuar aqui.
+REM ------------------------------------------------------------
+if not "%~1"=="atualizado" (
+  curl -fsSL "%RAW%/nova-loja.bat" -o "%TEMP%\nova-loja-novo.bat" >nul 2>&1
+  if exist "%TEMP%\nova-loja-novo.bat" (
+    findstr /c:"Agente de layout Nuvemshop" "%TEMP%\nova-loja-novo.bat" >nul 2>&1
+    if not errorlevel 1 (
+      fc /b "%TEMP%\nova-loja-novo.bat" "%~f0" >nul 2>&1
+      if errorlevel 1 (
+        copy /y "%TEMP%\nova-loja-novo.bat" "%~f0" >nul 2>&1
+        del "%TEMP%\nova-loja-novo.bat" >nul 2>&1
+        echo.
+        echo   Atalho atualizado para a versao mais recente. Reabrindo...
+        timeout /t 2 >nul
+        start "" "%~f0" atualizado
+        exit /b
+      )
+    )
+    del "%TEMP%\nova-loja-novo.bat" >nul 2>&1
+  )
+)
 
 setlocal enabledelayedexpansion
 chcp 65001 >nul
@@ -40,13 +68,19 @@ if not exist "%USERPROFILE%\.codex" mkdir "%USERPROFILE%\.codex"
 set PERFIL=%USERPROFILE%\.codex\nuvemshop.config.toml
 if not exist "%PERFIL%" (
   echo   Configurando o perfil de permissoes do Codex ^(primeira vez^)...
-  >"%PERFIL%" echo model = "gpt-5.6-sol"
+  >"%PERFIL%" echo model = "gpt-5.6-terra"
   >>"%PERFIL%" echo model_reasoning_effort = "medium"
   >>"%PERFIL%" echo approval_policy = "on-request"
   >>"%PERFIL%" echo sandbox_mode = "workspace-write"
   >>"%PERFIL%" echo.
   >>"%PERFIL%" echo [sandbox_workspace_write]
   >>"%PERFIL%" echo network_access = true
+) else (
+  findstr /c:"gpt-5.6-sol" "%PERFIL%" >nul 2>&1
+  if not errorlevel 1 (
+    powershell -NoProfile -Command "(Get-Content '%PERFIL%') -replace 'gpt-5.6-sol','gpt-5.6-terra' | Set-Content '%PERFIL%'" >nul 2>&1
+    echo   Perfil atualizado para o modelo padrao ^(Terra^).
+  )
 )
 
 findstr /c:"[profiles.nuvemshop]" "%USERPROFILE%\.codex\config.toml" >nul 2>&1
@@ -58,49 +92,17 @@ if not errorlevel 1 (
   echo.
 )
 
-REM ---------------------------------------------------------------
-REM  MCPs - registra so o que faltar, checando cada um por nome.
-REM ---------------------------------------------------------------
-
-REM Playwright (comando local, em cada agente)
-codex mcp list 2>nul | findstr /i playwright >nul 2>&1
-if errorlevel 1 (
-  echo   Registrando o navegador de teste no Codex...
-  codex mcp add playwright -- npx @playwright/mcp@latest >nul 2>&1
-)
-where claude >nul 2>&1
-if not errorlevel 1 (
-  claude mcp list 2>nul | findstr /i playwright >nul 2>&1
-  if errorlevel 1 claude mcp add playwright npx @playwright/mcp@latest >nul 2>&1
-)
-
-set MARCA_CHROMIUM=%USERPROFILE%\.codex\.chromium-baixado
-if not exist "%MARCA_CHROMIUM%" (
-  echo   Baixando o Chromium ^(primeira vez, pode demorar^)...
+set MARCA=%USERPROFILE%\.codex\.playwright-pronto
+if not exist "%MARCA%" (
+  echo   Preparando o navegador de teste ^(primeira vez, pode demorar^)...
+  codex mcp list 2>nul | findstr /i playwright >nul 2>&1
+  if errorlevel 1 codex mcp add playwright -- npx @playwright/mcp@latest >nul 2>&1
+  where claude >nul 2>&1
+  if not errorlevel 1 claude mcp add playwright npx @playwright/mcp@latest >nul 2>&1
   call npx --yes playwright install chromium >nul 2>&1
-  type nul > "%MARCA_CHROMIUM%"
+  type nul > "%MARCA%"
+  echo   Navegador de teste pronto.
 )
-
-REM A1 Gallery e MiroMiro (remotos por URL). MiroMiro e OAuth: navegador abre na 1a vez.
-call :registrar_design a1gallery https://www.a1.gallery/api/mcp
-call :registrar_design miromiro https://miromiro.app/mcp
-goto :depois_design
-
-:registrar_design
-where claude >nul 2>&1
-if not errorlevel 1 (
-  claude mcp list 2>nul | findstr /i %1 >nul 2>&1
-  if errorlevel 1 claude mcp add --transport http %1 %2 >nul 2>&1
-)
-codex mcp list 2>nul | findstr /i %1 >nul 2>&1
-if errorlevel 1 (
-  echo   Registrando %1 no Codex...
-  codex mcp add %1 --url %2 >nul 2>&1
-  if errorlevel 1 echo   Nao consegui registrar %1 no Codex. Rode 'codex mcp add --help' e registre na mao: %1 ^-^> %2
-)
-goto :eof
-
-:depois_design
 
 if exist ".modo" (
   set /p MODO=<.modo
@@ -114,6 +116,7 @@ if exist ".modo" (
   if /i "!M!"=="a" (set "MODO=modo-avancado") else (set "MODO=modo-simples")
   >.modo echo !MODO!
 )
+
 echo   Modo desta loja: !MODO!
 
 echo   Atualizando os manuais...
@@ -125,6 +128,8 @@ if exist "%PASTA%\AGENTS.md.novo" (
   if not exist ".claude" mkdir ".claude"
   if not exist "codigo\_anterior" mkdir "codigo\_anterior"
   curl -fsSL "%RAW%/settings.json" -o "%PASTA%\.claude\settings.json" >nul 2>&1
+  curl -fsSL "%RAW%/vigia.js" -o "%USERPROFILE%\.codex\vigia.js" >nul 2>&1
+  curl -fsSL "%RAW%/gasto.js" -o "%USERPROFILE%\.codex\gasto.js" >nul 2>&1
   if not exist "HANDOFF.md" curl -fsSL "%RAW%/HANDOFF-modelo.md" -o "%PASTA%\HANDOFF.md" >nul 2>&1
   echo   Manuais atualizados.
 ) else (
@@ -158,8 +163,16 @@ echo   Escreva o que voce quer mudar na loja. O agente conduz o resto.
 echo   ----------------------------------------
 echo.
 
+REM vigia de gasto em segundo plano - avisa se a sessao ficar cara
+if exist "%USERPROFILE%\.codex\vigia.js" (
+  start "vigia-gasto" /min node "%USERPROFILE%\.codex\vigia.js"
+)
+
 if "!AGENTE!"=="claude" (
   claude
 ) else (
   codex -p nuvemshop --cd "%PASTA%"
 )
+
+REM encerra o vigia ao fechar o agente
+taskkill /f /fi "WINDOWTITLE eq vigia-gasto*" >nul 2>&1

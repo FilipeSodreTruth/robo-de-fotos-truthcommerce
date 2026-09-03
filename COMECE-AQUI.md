@@ -133,6 +133,35 @@ que estava na memória, é só pedir: "copia de novo".
 
 ---
 
+# Se aparecer um aviso de "sessão longa"
+
+De vez em quando aparece uma notificação dizendo que a conversa está ficando cara. São dois
+passos:
+
+1. **Escreva `encerra` para o agente.** Ele fecha o que estava fazendo, anota tudo no arquivo e
+   te diz onde parou.
+2. **Digite `/new`.** Começa uma conversa limpa, e ele retoma pelo arquivo.
+
+Não é erro nem problema. É que quanto mais tempo a conversa fica aberta, mais caro fica cada
+mensagem — e a cota acaba antes da hora. Recomeçar não perde nada.
+
+O aviso funciona sozinho, você não precisa configurar nada.
+
+**Se ele não conseguir resolver algo depois de duas tentativas**, ele mesmo vai te avisar para
+digitar `/model` e escolher um modelo mais forte. Depois de resolver, não precisa voltar o
+modelo na mão: o próximo `/new` já começa no padrão de novo.
+
+**Para ver quanto sobrou da sua cota**, digite `/status` dentro da própria janela do agente. É o
+jeito oficial e mostra o número atual.
+
+Se quiser ver o histórico de gasto, no Terminal:
+
+```
+node ~/.codex/gasto.js hoje       # gasto de hoje, sessão por sessão
+node ~/.codex/gasto.js semana     # últimos 7 dias
+node ~/.codex/gasto.js sessoes    # as sessões mais caras da semana
+```
+
 # Se algo der errado
 
 **A loja quebrou / sumiu alguma coisa.** Diga isso ao agente em uma frase: "a loja quebrou",
@@ -140,11 +169,6 @@ que estava na memória, é só pedir: "copia de novo".
 
 **O agente pede autorização para algo que você não entende.** Responda que não e pergunte a
 ele por que precisa daquilo antes de liberar.
-
-**Abriu uma aba do navegador pedindo login numa ferramenta chamada MiroMiro.** Isso é normal
-na primeira vez que o agente busca inspiração de design — pode autorizar. É diferente do item
-acima: aqui é uma página de login que abre sozinha no navegador (não o agente te pedindo uma
-senha no chat). Só acontece uma vez por máquina.
 
 **Apareceu erro logo ao abrir.** Provavelmente falta o Node, ou o agente que você escolheu
 não está instalado nessa máquina. Chame quem fez a

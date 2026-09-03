@@ -9,9 +9,14 @@
 #  encontrar o formato antigo lá.
 #
 #  Uso: codex -p nuvemshop
+#
+#  Padrao: Terra, que da conta da maior parte do trabalho de layout.
+#  Para subir no meio da sessao:  /model
+#  Trocar de modelo muda o custo por token; trocar de effort nao muda a
+#  taxa, so o volume de raciocinio gerado.
 # ============================================================
 
-model = "gpt-5.6-sol"
+model = "gpt-5.6-terra"
 model_reasoning_effort = "medium"
 
 # on-request: o agente trabalha sozinho dentro da pasta e só para

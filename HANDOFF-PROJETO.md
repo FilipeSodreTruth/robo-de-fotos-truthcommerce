@@ -1,6 +1,6 @@
 # Handoff — Agente de layout Nuvemshop
 
-Estado do projeto em 2026-08-21. Para retomar o trabalho em outra sessão, com outro agente
+Estado do projeto em 2026-08-17. Para retomar o trabalho em outra sessão, com outro agente
 ou outra pessoa.
 
 Repositório: `github.com/FilipeSodreTruth/robo-de-fotos-truthcommerce` (público, branch `main`).
@@ -25,8 +25,14 @@ modo-simples/   AGENTS.md + CLAUDE.md
 modo-avancado/  AGENTS.md + CLAUDE.md
 ```
 
-Os manuais são baixados a cada execução do script — editar no GitHub propaga para todo mundo
-na próxima abertura. Só o script em si não se auto-atualiza (pendência).
+Tudo é baixado a cada execução do script — manuais, `settings.json`, `vigia.js`, `gasto.js` e o
+modelo de handoff. **O próprio script também se auto-atualiza:** compara-se com a versão do
+repositório antes de qualquer coisa e se substitui se estiver desatualizado (no Mac continua na
+mesma execução via `exec`; no Windows reabre a janela, porque o `.bat` é lido linha a linha do
+disco). Editar qualquer arquivo no GitHub propaga para todas as máquinas na próxima abertura,
+sem ninguém reinstalar nada.
+
+O script também migra perfis antigos do Codex que ainda apontem para o modelo caro.
 
 ## Os dois modos
 
@@ -81,6 +87,30 @@ armadilha do tema descoberta, falha com causa identificada, antes de espera long
 Prompt longo dispersa o modelo. Regras ficam no topo e não se repetem nos passos.
 
 **Backup por cliente** (`../<pasta>-backup`), nunca compartilhado.
+
+**Sem MCP de design conectado.** Galerias e extratores de token (A1 Gallery, MiroMiro e
+similares) foram avaliados e descartados: somam tools ao contexto de toda sessão e o acervo é de
+landing page, não de e-commerce. O Playwright que já está no fluxo lê `getComputedStyle` de
+qualquer loja de referência, sem conta nova e sem custo fixo. Não reabrir sem motivo novo.
+
+**Sessão curta é a maior alavanca de custo.** Medição real: duas sessões de 90 e 105 turnos
+queimaram 25M de tokens (44% da semana), a ~137k por turno — cada mensagem reenvia o contexto
+acumulado. Dois gatilhos independentes levam ao mesmo lugar: o agente sugere `/new` ao fim de cada bloco de
+trabalho, e o vigia notifica o usuário quando a sessão fica cara. Como o vigia é um processo
+separado e o agente não enxerga a notificação, existe uma palavra combinada: o usuário escreve
+**"encerra"** e o agente fecha o handoff, resume em três linhas e libera o `/new`. Isso só é
+seguro porque a regra do handoff mantém o fio em disco. O vigia zera os avisos quando detecta
+arquivo de sessão novo, então cada sessão é vigiada do zero. Duas ferramentas no repositório, ambas
+lendo `~/.codex/sessions` localmente: `gasto.js` (relatório sob demanda — `hoje`, `semana`,
+`sessoes`) e `vigia.js` (segundo plano, notificação do sistema em 0,8M / 2M / 4M
+por **sessão**; o último nível repete a cada 5 min até a sessão acabar). Números provisórios —
+recalibrar com `gasto.js sessoes` depois de uma semana de uso real, agora que o corte do
+`browser_snapshot` deve ter derrubado o custo por turno.
+
+Decidido não monitorar cota semanal ou de time: isso se acompanha no painel do Codex. O vigia
+cuida só do tamanho da sessão, que é o que ninguém percebe sozinho. Os scripts baixam as duas para `~/.codex/` e iniciam o vigia
+automaticamente, encerrando junto com o agente. O time é grande e não técnico — aviso passivo
+que exige lembrar de rodar não funciona nesse contexto.
 
 **`browser_snapshot` só sob demanda.** Ele devolve a árvore de acessibilidade inteira — numa
 home de loja (4.600px de altura na Cutelaria) isso domina o custo de contexto da sessão. Quando
@@ -147,62 +177,16 @@ fica visível na hora — precisaria dos mesmos portões de aprovação.
 kits no catálogo, visibilidade de categoria, API de blog, e — atenção — o **timeout de webhook
 caiu de 10s para 3s**, o que pode estar quebrando automação n8n sem ninguém perceber.
 
-## Pesquisa visual — A1 Gallery + MiroMiro (implementado e validado, ago/2026)
-
-Decidido **não** virar modo separado. A ideia de uma sessão à parte foi descartada: trocar de
-pasta no meio de um atendimento (fechar, reabrir, reexplicar) não compensa. Ficou como etapa
-condicional dentro dos manuais existentes — **simples e CLI**. Os dois MCPs são registrados de
-antemão pelo script; o agente decide na conversa quando usar.
-
-**Três ferramentas, três camadas — não concorrem:**
-- **A1 Gallery** acha a *direção* (busca por estilo; acervo de SaaS/landing). Só quando o
-  pedido é aberto, sem site nem print. Nunca determina cor/fonte da loja.
-- **MiroMiro** mede a *aparência* de um site concreto (estrutura, espaçamento, arredondamento,
-  cores, tipografia, CSS já calculado). Só quando há URL apontada e o pedido é "faz
-  igual/parecido".
-- **Playwright** mede o *comportamento* — o que o MiroMiro não pega: lógica de arraste, evento
-  de mouse, proporção de movimento, presença de scroll-snap.
-
-**Fluxo validado em produção** (um carrossel de arraste ficou fiel só na 3ª tentativa; as duas
-primeiras falharam por scroll-snap e captura de ponteiro que a referência não usava):
-A1 escolhe a referência → **Playwright localiza o seletor exato** da seção (senão o MiroMiro
-traz a página inteira) → MiroMiro extrai só aquela seção → Playwright inspeciona o JS e **mede
-a interação** → reconhece o tema da loja → importa só estrutura+comportamento → aplica cor/fonte
-da loja → preview → testa desktop/celular/console/movimento real → aprovação → publicação.
-
-**Regras novas que entraram nos quatro manuais:**
-- **Medir a interação, não só olhar.** "Se move, tá bom" falhou 3x. Mover o mouse X px e
-  comparar quantos px a referência rola e em quanto tempo (caso real: 240px→240px em ~140ms),
-  repetindo o teste na loja. É a versão de UI do "a mensagem do push não é prova".
-- **Não confiar no `accent_color` do tema.** Caso real: estava marrom, mas a identidade real da
-  loja era cinza + amarelo. A cor visível nos componentes manda, não o setting salvo.
-- **Reaproveitar componente nativo do tema** quando existir (ex.: Ipanema já tem seção de
-  depoimentos com Swiper) — mantém editável pelo painel e evita biblioteca extra.
-
-**Registro dos MCPs (confirmado contra `codex mcp list`):** o Codex separa MCP de comando
-local (Playwright: `codex mcp add playwright -- npx @playwright/mcp@latest`) do remoto por URL
-(`codex mcp add a1gallery --url https://www.a1.gallery/api/mcp`, idem miromiro). No Claude Code:
-`claude mcp add --transport http <nome> <url>`. **A1 não pede auth; MiroMiro é OAuth** — abre o
-navegador pedindo autorização na primeira vez (esperado; o COMECE-AQUI.md avisa o usuário final
-para não recusar). O script agora **checa cada MCP por nome e registra só o que falta** (nada de
-marcador único que pulava o bloco inteiro), então uma máquina com A1 mas sem MiroMiro se
-auto-repara na próxima abertura.
-
 ## Pendências
 
 - [ ] Testar o fluxo FTP do CLI num tema clássico — se funcionar, reescrever os passos de
       entrega do modo simples
 - [ ] Corrigir o manual do modo CLI: bloco `code` cabe em qualquer seção com tag "general"
 - [ ] Confirmar a sintaxe de `rules`/execpolicy do Codex para bloquear `theme publish`
-- [ ] Testar o `.bat` de ponta a ponta no Windows — inclui a sub-rotina nova `:registrar_design`
-      (registro per-MCP) e a tela de OAuth do MiroMiro; só o caminho do Codex no Mac foi testado
-      de verdade
+- [ ] Testar o `.bat` de ponta a ponta no Windows
 - [ ] Renomear o repositório
-- [ ] Auto-atualização do script (~10 linhas)
 - [ ] Validar por medição os limites de `css_code` e `custom_css`
 - [ ] Verificar o timeout de 3s nos webhooks do n8n
-- [ ] Designesy (auditoria de URL com nota A-F) — ainda não avaliado; MiroMiro e A1 já entraram.
-      Testar isolado, medindo se o resultado melhora, antes de somar (soma tools ao contexto)
 - [ ] Biblioteca de componentes (abaixo)
 
 ## Próximo passo combinado: biblioteca de componentes
