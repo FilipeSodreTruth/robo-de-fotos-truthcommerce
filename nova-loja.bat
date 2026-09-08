@@ -11,6 +11,9 @@ set RAW=https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthco
 REM Onde as pastas dos clientes ficam
 set BASE=%USERPROFILE%\nuvemshop-lojas
 
+REM Modelo padrao do time. Trocar aqui muda em todas as maquinas na proxima abertura.
+set MODELO_PADRAO=gpt-5.6-terra
+
 REM ------------------------------------------------------------
 REM  Auto-atualizacao: pega a versao mais nova deste proprio atalho.
 REM  O .bat e lido linha a linha do disco, entao trocamos o arquivo
@@ -68,7 +71,7 @@ if not exist "%USERPROFILE%\.codex" mkdir "%USERPROFILE%\.codex"
 set PERFIL=%USERPROFILE%\.codex\nuvemshop.config.toml
 if not exist "%PERFIL%" (
   echo   Configurando o perfil de permissoes do Codex ^(primeira vez^)...
-  >"%PERFIL%" echo model = "gpt-5.6-terra"
+  >"%PERFIL%" echo model = "%MODELO_PADRAO%"
   >>"%PERFIL%" echo model_reasoning_effort = "medium"
   >>"%PERFIL%" echo approval_policy = "on-request"
   >>"%PERFIL%" echo sandbox_mode = "workspace-write"
@@ -76,18 +79,19 @@ if not exist "%PERFIL%" (
   >>"%PERFIL%" echo [sandbox_workspace_write]
   >>"%PERFIL%" echo network_access = true
 ) else (
-  findstr /c:"gpt-5.6-sol" "%PERFIL%" >nul 2>&1
-  if not errorlevel 1 (
-    powershell -NoProfile -Command "(Get-Content '%PERFIL%') -replace 'gpt-5.6-sol','gpt-5.6-terra' | Set-Content '%PERFIL%'" >nul 2>&1
-    echo   Perfil atualizado para o modelo padrao ^(Terra^).
-  )
+  REM O perfil so era escrito na primeira execucao, e a unica migracao existente
+  REM trocava gpt-5.6-sol por Terra. Qualquer outro modelo - Astra, Luna, um que
+  REM nem existe ainda - ficava para sempre. Agora a linha do modelo e reescrita
+  REM a cada abertura: o padrao vive aqui no script, nao na maquina de cada um.
+  powershell -NoProfile -Command "$p='%PERFIL%'; $q=[char]34; $l='model = '+$q+'%MODELO_PADRAO%'+$q; $c=Get-Content -Path $p; if ($c -match '^model\s*=') { $c = $c -replace '^model\s*=.*', $l } else { $c = ,$l + $c }; Set-Content -Path $p -Value $c" >nul 2>&1
 )
 
 findstr /c:"[profiles.nuvemshop]" "%USERPROFILE%\.codex\config.toml" >nul 2>&1
 if not errorlevel 1 (
   echo.
   echo   ATENCAO: existe um bloco antigo [profiles.nuvemshop] no seu
-  echo   config.toml. Apague esse bloco inteiro, senao o Codex recusa o perfil.
+  echo   config.toml. Apague esse bloco inteiro, senao o Codex recusa o
+  echo   perfil e abre no modelo errado.
   echo   Arquivo: %USERPROFILE%\.codex\config.toml
   echo.
 )
@@ -155,9 +159,19 @@ set AGENTE=codex
 if /i "!ESCOLHA!"=="c" set "AGENTE=claude"
 if /i "!ESCOLHA!"=="claude" set "AGENTE=claude"
 
+REM Segunda camada: mesmo que o perfil seja ignorado (bloco antigo no config.toml,
+REM -p recusado), a linha de abertura fixa o modelo. So usa a flag se esta versao
+REM da CLI tiver --model; versoes antigas abrem como antes.
+set "FLAG_MODELO="
+if /i "!AGENTE!"=="codex" (
+  codex --help 2>nul | findstr /c:"--model" >nul 2>&1
+  if not errorlevel 1 set "FLAG_MODELO=--model %MODELO_PADRAO%"
+)
+
 echo.
 echo   Pronto. Abrindo o !AGENTE! nesta pasta:
 echo   %PASTA%
+if /i "!AGENTE!"=="codex" echo   Modelo: %MODELO_PADRAO%   ^(para subir no meio do trabalho: /model^)
 echo.
 echo   Escreva o que voce quer mudar na loja. O agente conduz o resto.
 echo   ----------------------------------------
@@ -165,13 +179,13 @@ echo.
 
 REM vigia de gasto em segundo plano - avisa se a sessao ficar cara
 if exist "%USERPROFILE%\.codex\vigia.js" (
-  start "vigia-gasto" /min node "%USERPROFILE%\.codex\vigia.js"
+  start "vigia-gasto" /min node "%USERPROFILE%\.codex\vigia.js" "%PASTA%"
 )
 
 if "!AGENTE!"=="claude" (
   claude
 ) else (
-  codex -p nuvemshop --cd "%PASTA%"
+  codex -p nuvemshop !FLAG_MODELO! --cd "%PASTA%"
 )
 
 REM encerra o vigia ao fechar o agente

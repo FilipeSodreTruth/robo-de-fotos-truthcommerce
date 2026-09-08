@@ -11,6 +11,9 @@ RAW="https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcomme
 # Onde as pastas dos clientes ficam
 BASE="$HOME/nuvemshop-lojas"
 
+# Modelo padrao do time. Trocar aqui muda em todas as maquinas na proxima abertura.
+MODELO_PADRAO="gpt-5.6-terra"
+
 # ------------------------------------------------------------
 #  Auto-atualizacao: pega a versao mais nova deste proprio atalho
 #  antes de qualquer coisa. Roda uma vez so (a variavel evita loop).
@@ -64,8 +67,8 @@ mkdir -p "$HOME/.codex"
 PERFIL="$HOME/.codex/nuvemshop.config.toml"
 if [ ! -f "$PERFIL" ]; then
   echo "  Configurando o perfil de permissoes do Codex (primeira vez)..."
-  cat > "$PERFIL" <<'TOMLEOF'
-model = "gpt-5.6-terra"
+  cat > "$PERFIL" <<TOMLEOF
+model = "$MODELO_PADRAO"
 model_reasoning_effort = "medium"
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
@@ -73,10 +76,18 @@ sandbox_mode = "workspace-write"
 [sandbox_workspace_write]
 network_access = true
 TOMLEOF
-elif grep -q 'gpt-5.6-sol' "$PERFIL"; then
-  # perfil antigo abria no modelo caro por padrao; hoje o padrao e o Terra
-  sed -i.bak 's/gpt-5.6-sol/gpt-5.6-terra/' "$PERFIL" && rm -f "$PERFIL.bak"
-  echo "  Perfil atualizado para o modelo padrao (Terra)."
+else
+  # O perfil so era escrito na primeira execucao, e a unica migracao existente
+  # trocava gpt-5.6-sol por Terra. Qualquer outro modelo (Astra, Luna, um que
+  # nem existe ainda) ficava para sempre. Agora a linha do modelo e reescrita
+  # a cada abertura: o padrao vive aqui no script, nao na maquina de cada um.
+  if grep -qE '^model[[:space:]]*=' "$PERFIL"; then
+    sed -i.bak -E "s/^model[[:space:]]*=.*/model = \"$MODELO_PADRAO\"/" "$PERFIL"
+    rm -f "$PERFIL.bak"
+  else
+    printf 'model = "%s"\n' "$MODELO_PADRAO" | cat - "$PERFIL" > "$PERFIL.tmp"
+    mv "$PERFIL.tmp" "$PERFIL"
+  fi
 fi
 
 # versoes antigas deste script gravavam o perfil dentro do config.toml,
@@ -85,7 +96,8 @@ if grep -q "\[profiles.nuvemshop\]" "$HOME/.codex/config.toml" 2>/dev/null; then
   echo ""
   echo "  ATENCAO: existe um bloco antigo [profiles.nuvemshop] no seu"
   echo "  ~/.codex/config.toml. Apague esse bloco inteiro, senao o Codex"
-  echo "  recusa o perfil. Para abrir:  open -e ~/.codex/config.toml"
+  echo "  recusa o perfil e abre no modelo errado. Para abrir:"
+  echo "  open -e ~/.codex/config.toml"
   echo ""
 fi
 
@@ -162,9 +174,20 @@ case "$ESCOLHA" in
   *)                 AGENTE="codex"  ;;
 esac
 
+# Segunda camada: mesmo que o perfil seja ignorado (bloco antigo no config.toml,
+# -p recusado), a linha de abertura fixa o modelo. So usa a flag se esta versao
+# da CLI tiver --model; versoes antigas abrem como antes.
+FLAG_MODELO=""
+if [ "$AGENTE" = "codex" ] && codex --help 2>/dev/null | grep -q -- '--model'; then
+  FLAG_MODELO="--model $MODELO_PADRAO"
+fi
+
 echo ""
 echo "  Pronto. Abrindo o $AGENTE nesta pasta:"
 echo "  $PASTA"
+if [ "$AGENTE" = "codex" ]; then
+  echo "  Modelo: $MODELO_PADRAO   (para subir no meio do trabalho: /model)"
+fi
 echo ""
 echo "  Escreva o que você quer mudar na loja. O agente conduz o resto."
 echo "  ----------------------------------------"
@@ -173,7 +196,7 @@ echo ""
 # vigia de gasto em segundo plano — avisa se a sessao ficar cara
 VIGIA=""
 if [ -f "$HOME/.codex/vigia.js" ]; then
-  node "$HOME/.codex/vigia.js" >/dev/null 2>&1 &
+  node "$HOME/.codex/vigia.js" "$PASTA" >/dev/null 2>&1 &
   VIGIA=$!
 fi
 limpar() { [ -n "$VIGIA" ] && kill "$VIGIA" 2>/dev/null; }
@@ -182,7 +205,7 @@ trap limpar EXIT INT TERM
 if [ "$AGENTE" = "claude" ]; then
   claude
 else
-  codex -p nuvemshop --cd "$PASTA"
+  codex -p nuvemshop $FLAG_MODELO --cd "$PASTA"
 fi
 
 limpar
