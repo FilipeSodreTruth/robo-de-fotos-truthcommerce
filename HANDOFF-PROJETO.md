@@ -149,6 +149,14 @@ cache $0,34 + saída $0,14) ou ~$1,41 em Sol. O cache foi 93% do volume e 46% do
 tem desconto de 90%. Menos de um dólar por ajuste completo — o gargalo do negócio é tempo de
 pessoa, não token. (A ordem de grandeza se sustenta mesmo se o volume estiver dobrado.)
 
+**O envio cobre só layout.** `envia-gasto.js` manda apenas sessões cujo `cwd` está dentro de
+`~/nuvemshop-lojas` — o `BASE` que os dois launchers usam para criar a pasta da loja. A loja é
+o primeiro segmento depois dele. Fica de fora tudo que a pessoa abra por fora e, principalmente,
+o robô de imagens do AutomaTruth, que roda cada geração num `CODEX_HOME` isolado e descartável
+(`codex-img-XXXXXX`): no histórico desta máquina eram **3.074 sessões** que virariam 3.074
+"projetos" de uma sessão só. O filtro lê apenas a string de `cwd` gravada no log, sem tocar no
+disco, então continua valendo para loja já apagada ou renomeada.
+
 **Quem gastou, e de qual cota.** São perguntas diferentes e o `envia-gasto.js` manda as duas.
 O time inteiro compartilha **duas contas Codex**: a maioria das pessoas loga com `suporte@`,
 algumas com `vitor@`. Logo a conta **não** identifica a pessoa — ela identifica qual das duas
@@ -165,9 +173,18 @@ guarda conta nenhuma, só `cwd`, `git` e `plan_type`. Limite conhecido: é a con
 momento do envio, então troca de conta dentro da janela de 7 dias atribui os dias antigos à
 conta atual.
 
-**Onde a cota realmente foi:** as sessões caras estavam em `Documents/API-MercadoLivre`, não no
-agente de layout. Aplicar a mesma disciplina naquele repositório vale mais que qualquer
-economia aqui.
+**Onde a cota realmente foi.** Medido no histórico completo de uma máquina (2026-09-09,
+2.539M de tokens em 3.464 sessões):
+
+| Pasta | Tokens | Sessões |
+|---|---:|---:|
+| `API-MercadoLivre` | 2.246M | 352 |
+| robô de imagens (`codex-img-*`) | 130M | 3.074 |
+| layout (`nuvemshop-lojas`) | **18M** | 5 |
+| outros projetos avulsos | 145M | 33 |
+
+Layout é **0,7%** do consumo. A disciplina de sessão vale muito mais aplicada ao repositório do
+MercadoLivre do que aqui — e é bom lembrar disso antes de gastar esforço otimizando este lado.
 
 **Não monitorar cota semanal** (nem de time): `/status` dentro da sessão do Codex já mostra o
 restante. O vigia cuida só do tamanho da sessão, que é o que ninguém percebe sozinho.
