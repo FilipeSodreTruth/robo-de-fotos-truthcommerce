@@ -75,8 +75,11 @@ function lerSessao(arquivo) {
       entrada = u.input_tokens || 0;
       saida = u.output_tokens || 0;
       cache = u.cached_input_tokens || 0;
-      /* o cache conta na cota e nao entra em total_tokens — somar */
-      total = (u.total_tokens || entrada + saida) + cache;
+      /* NAO somar o cache: medido em 6 sessoes reais (2026-09-09),
+         total_tokens == input_tokens + output_tokens e cached_input_tokens
+         e um SUBCONJUNTO de input_tokens - ja esta dentro do total.
+         Somar de novo inflava o numero em ~2x. */
+      total = u.total_tokens || entrada + saida;
     } catch {}
   }
   if (!total) return null;
