@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 /*
- * vigia.js — acompanha o gasto da sessao atual do Codex em segundo plano e
- * avisa por notificacao do sistema quando ela ficar longa demais.
+ * vigia.js — acompanha o quanto a sessao atual do Codex esta comendo da COTA
+ * SEMANAL e avisa por notificacao do sistema quando o preco ficar alto.
  *
- * Cuida so do tamanho da sessao. A cota geral do plano se acompanha no
- * painel do Codex.
+ * Mede token NOVO (entrada nao cacheada + saida), nao o total. Medido em
+ * 2026-09-09 sobre 3.464 sessoes reais: o total e 99,6% entrada, e 94% dela e
+ * CACHE - que quase nao consome cota. Correlacionando janelas semanais com a
+ * % consumida, o total erra por um fator de 2473x e o token novo por 112x.
+ * Ou seja: o total infla com cache e NAO diz o que a cota custou. Sessao de
+ * 183M totais gastou o mesmo que uma de 285M, porque as duas tinham ~5M novos.
  *
  * Iniciado automaticamente pelo nova-loja. Nao precisa rodar na mao.
  * Le so os registros locais em ~/.codex/sessions; nao envia nada.
@@ -19,17 +23,26 @@ const BASE = path.join(os.homedir(), ".codex", "sessions");
 const INICIO = Date.now();
 const INTERVALO = 30_000;
 
-/* Avisos por sessao, em tokens. Calibrar com dados reais depois de uma semana:
-   `node gasto.js sessoes` mostra a distribuicao. Se o primeiro aviso virar ruido,
-   suba o numero; se sessao cara passar batido, desca. */
+/* A cota semanal vale ~6M de token NOVO (estimado no mesmo levantamento;
+   ordem de grandeza, nao precisao - a dispersao de 112x provavelmente e peso
+   por modelo). Os avisos sao dados em % dessa semana, que e a moeda real.
+
+   Calibragem: as sessoes de layout medidas gastaram 40k, 53k, 218k e 352k de
+   token novo. Com os cortes abaixo, as duas leves passam caladas e as duas
+   pesadas avisam - que e o comportamento desejado. Aviso que toca em sessao
+   normal vira ruido e ninguem le.
+
+   Recalibrar com `node gasto.js sessoes` depois de uma semana de uso real. */
+const SEMANA_NOVO = 6e6;
 const AVISOS = [
-  { em: 0.8e6, titulo: "Sessao ficando longa",
+  { pct: 1.7, titulo: "Sessao ja custou ~1,7% da semana",
     texto: "Escreva 'encerra' para o agente fechar o assunto, depois /new. Nada se perde." },
-  { em: 2e6, titulo: "Sessao cara",
-    texto: "Cada mensagem custa varias vezes mais que no comeco. Escreva 'encerra' e depois /new." },
-  { em: 4e6, titulo: "Feche esta sessao",
-    texto: "Longa demais para ser eficiente. Escreva 'encerra' e depois /new — nada se perde." },
-];
+  { pct: 4, titulo: "Sessao cara: ~4% da semana",
+    texto: "A cota e compartilhada com o time. Escreva 'encerra' e depois /new." },
+  { pct: 8, titulo: "Feche esta sessao: ~8% da semana",
+    texto: "Uma sessao so nao deveria custar isso. Escreva 'encerra' e depois /new - nada se perde." },
+].map((a) => ({ ...a, em: Math.round((a.pct / 100) * SEMANA_NOVO) }));
+
 let proximo = 0;
 let arquivoVigiado = null;   /* sessao que estamos acompanhando agora */
 
@@ -98,13 +111,20 @@ function seguro(fn) {
   }
 }
 
-function totalDe(arquivo) {
+/* Token NOVO da sessao: entrada que NAO veio do cache, mais a saida.
+   cached_input_tokens e um SUBCONJUNTO de input_tokens (verificado em 6 sessoes
+   reais), entao a subtracao e valida. */
+function novoDe(arquivo) {
   const texto = seguro(() => fs.readFileSync(arquivo, "utf8"));
   if (!texto) return 0;
   const usos = texto.match(/"total_token_usage":\{[^}]*\}/g);
   if (!usos || !usos.length) return 0;
   try {
-    return JSON.parse("{" + usos[usos.length - 1] + "}").total_token_usage.total_tokens || 0;
+    const u = JSON.parse("{" + usos[usos.length - 1] + "}").total_token_usage;
+    const entrada = u.input_tokens || 0;
+    const cache = u.cached_input_tokens || 0;
+    const saida = u.output_tokens || 0;
+    return Math.max(entrada - cache, 0) + saida;
   } catch {
     return 0;
   }
@@ -121,8 +141,8 @@ function tick() {
   }
 
   if (arquivo) {
-    const total = totalDe(arquivo);
-    while (proximo < AVISOS.length && total >= AVISOS[proximo].em) {
+    const novo = novoDe(arquivo);
+    while (proximo < AVISOS.length && novo >= AVISOS[proximo].em) {
       const a = AVISOS[proximo];
       notificar(a.titulo, a.texto);
       proximo++;
@@ -130,7 +150,7 @@ function tick() {
     }
 
     const ultimo = AVISOS[AVISOS.length - 1];
-    if (total >= ultimo.em && Date.now() - ultimoReforco >= REFORCO) {
+    if (novo >= ultimo.em && Date.now() - ultimoReforco >= REFORCO) {
       notificar(ultimo.titulo, ultimo.texto);
       ultimoReforco = Date.now();
     }
