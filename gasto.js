@@ -40,6 +40,16 @@ function arquivosDoDia([y, m, d]) {
     .map((f) => path.join(dir, f));
 }
 
+/* O robo de imagens roda cada geracao num CODEX_HOME isolado e descartavel
+   (codex-img-XXXXXX), entao sozinho ele inventa milhares de "projetos" de uma
+   sessao so - 3.074 numa medicao de 2026-09-09, contra 16 pastas de verdade.
+   Colapsa tudo num balde so, senao a lista de projetos nao serve pra nada. */
+function nomeProjeto(cwd) {
+  if (!cwd) return "desconhecido";
+  const base = path.basename(cwd);
+  return /^codex-img-/.test(base) ? "[robo de imagens]" : base;
+}
+
 /* Le uma sessao e devolve o total acumulado (a ultima ocorrencia manda),
    o numero de turnos do usuario e a pasta em que rodou. */
 function lerSessao(arquivo) {
@@ -84,7 +94,7 @@ function lerSessao(arquivo) {
     saida,
     cache,
     turnos,
-    cwd: cwd ? path.basename(cwd) : "?",
+    cwd: nomeProjeto(cwd),
     hora,
   };
 }

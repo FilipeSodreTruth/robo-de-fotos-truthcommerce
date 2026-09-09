@@ -96,15 +96,28 @@ function lerSessao(arquivo) {
     cwd = j.payload?.cwd || j.cwd || "";
   } catch {}
 
-  /* so o nome da pasta, nunca o caminho inteiro */
-  return {
-    total,
-    entrada,
-    saida,
-    cache,
-    turnos,
-    projeto: cwd ? path.basename(cwd) : "desconhecido",
-  };
+  /* so o nome da loja, nunca o caminho inteiro */
+  const projeto = lojaDe(cwd);
+  if (!projeto) return null; // nao e sessao de layout
+
+  return { total, entrada, saida, cache, turnos, projeto };
+}
+
+/* SO conta sessao de layout. Os dois launchers criam a pasta da loja dentro de
+   ~/nuvemshop-lojas (BASE, linha 12 do nova-loja.command e do .bat), entao a
+   loja e o primeiro segmento depois desse diretorio. Devolve null pra qualquer
+   outra coisa - o robo de imagens (codex-img-*, milhares de pastas isoladas e
+   descartaveis) e qualquer projeto que a pessoa abra por fora ficam de fora.
+
+   Le so a string de cwd gravada no log: nao toca no disco, entao continua
+   funcionando pra loja que ja foi apagada ou renomeada. Aceita / e \\ por causa
+   do Windows. */
+function lojaDe(cwd) {
+  if (!cwd) return null;
+  const partes = cwd.split(/[\\/]+/);
+  const i = partes.lastIndexOf("nuvemshop-lojas");
+  if (i === -1) return null;
+  return partes[i + 1] || null;
 }
 
 /* Qual conta Codex esta logada NESTA maquina. O log de sessao (session_meta)
@@ -189,7 +202,11 @@ function main() {
   if (!FORCAR && !MOSTRAR && ultimo === hojeISO()) return;
 
   const dias = coletar();
-  if (!dias.length) return;
+  if (!dias.length) {
+    /* normal: maquina que nao fez layout na janela nao tem o que mandar */
+    if (MOSTRAR) console.log("Nenhuma sessao de layout (~/nuvemshop-lojas) nos ultimos " + JANELA + " dias.");
+    return;
+  }
 
   const corpo = {
     maquina: os.hostname(),
