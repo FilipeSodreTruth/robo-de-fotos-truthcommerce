@@ -2,8 +2,9 @@
 /*
  * envia-gasto.js — manda o resumo de consumo desta maquina para o n8n.
  *
- * Envia SO numeros agregados: pasta do projeto, tokens, sessoes, turnos.
- * Nunca conteudo de conversa, nunca caminho completo, nunca token de loja.
+ * Envia SO numeros agregados: conta Codex, pasta do projeto, tokens, sessoes,
+ * turnos. Nunca conteudo de conversa, nunca caminho completo, nunca token
+ * de loja, nunca o id_token em si - so a claim de email dele.
  *
  * A URL do webhook fica em ~/.codex/gasto-webhook.txt, uma vez por maquina:
  *
@@ -106,6 +107,31 @@ function lerSessao(arquivo) {
   };
 }
 
+/* Qual conta Codex esta logada NESTA maquina. O log de sessao (session_meta)
+   nao guarda a conta - so cwd, git e plan_type - entao a unica fonte e o
+   auth.json que o proprio Codex escreve. tokens.id_token e um JWT OIDC; so
+   decodificamos a claim "email" localmente, sem validar assinatura (nao e
+   checagem de seguranca, e leitura de arquivo local). Mesmo metodo do
+   readCodexAccountIdentity do robo de imagens, pra chavear igual.
+
+   Limite conhecido: e a conta logada AGORA. Se a maquina trocou de conta
+   dentro da janela de 7 dias, os dias antigos ficam atribuidos a conta atual.
+   Na pratica cada pessoa usa uma conta so, entao serve pra dizer QUEM gastou. */
+function contaCodex() {
+  const raw = seguro(() =>
+    JSON.parse(fs.readFileSync(path.join(os.homedir(), ".codex", "auth.json"), "utf8"))
+  );
+  const idToken = raw?.tokens?.id_token;
+  if (typeof idToken !== "string") return null;
+  const payloadB64 = idToken.split(".")[1];
+  if (!payloadB64) return null;
+  const claims = seguro(() =>
+    JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf8"))
+  );
+  const email = typeof claims?.email === "string" ? claims.email.trim().toLowerCase() : null;
+  return email || null;
+}
+
 function coletar() {
   const dias = [];
   for (let i = 0; i < JANELA; i++) {
@@ -164,6 +190,9 @@ function main() {
   const corpo = {
     maquina: os.hostname(),
     usuario: os.userInfo().username,
+    /* quem realmente gastou: o usuario do SO nao serve de chave (uma mesma
+       maquina roda com conta Codex de outra pessoa) */
+    conta: contaCodex(),
     enviado_em: new Date().toISOString(),
     janela_dias: JANELA,
     dias,
