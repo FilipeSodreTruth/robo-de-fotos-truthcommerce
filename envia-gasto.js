@@ -114,9 +114,13 @@ function lerSessao(arquivo) {
    checagem de seguranca, e leitura de arquivo local). Mesmo metodo do
    readCodexAccountIdentity do robo de imagens, pra chavear igual.
 
+   ATENCAO - a conta NAO identifica a pessoa. O time inteiro compartilha duas
+   contas: a maioria loga com suporte@, alguns com vitor@. A conta diz qual
+   COTA esta sendo drenada, nao quem drenou. Quem e a pessoa sai de
+   maquina + usuario, que e uma por pessoa.
+
    Limite conhecido: e a conta logada AGORA. Se a maquina trocou de conta
-   dentro da janela de 7 dias, os dias antigos ficam atribuidos a conta atual.
-   Na pratica cada pessoa usa uma conta so, entao serve pra dizer QUEM gastou. */
+   dentro da janela de 7 dias, os dias antigos ficam atribuidos a conta atual. */
 function contaCodex() {
   const raw = seguro(() =>
     JSON.parse(fs.readFileSync(path.join(os.homedir(), ".codex", "auth.json"), "utf8"))
@@ -190,8 +194,8 @@ function main() {
   const corpo = {
     maquina: os.hostname(),
     usuario: os.userInfo().username,
-    /* quem realmente gastou: o usuario do SO nao serve de chave (uma mesma
-       maquina roda com conta Codex de outra pessoa) */
+    /* qual das duas cotas compartilhadas do time foi drenada (suporte@ ou
+       vitor@) - nao e a pessoa: quem gastou sai de maquina + usuario */
     conta: contaCodex(),
     enviado_em: new Date().toISOString(),
     janela_dias: JANELA,

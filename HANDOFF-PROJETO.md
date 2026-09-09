@@ -149,12 +149,21 @@ cache $0,34 + saída $0,14) ou ~$1,41 em Sol. O cache foi 93% do volume e 46% do
 tem desconto de 90%. Menos de um dólar por ajuste completo — o gargalo do negócio é tempo de
 pessoa, não token. (A ordem de grandeza se sustenta mesmo se o volume estiver dobrado.)
 
-**Quem gastou:** `envia-gasto.js` manda por dia e por pasta de projeto, com a **conta Codex**
-lida do `auth.json` (claim `email` do `id_token`). Isso é necessário porque nem o hostname nem
-o usuário do sistema identificam a pessoa — numa mesma máquina o usuário do SO pode ser um e a
-conta Codex logada, outra. O `session_meta` do log **não** guarda a conta: só `cwd`, `git` e
-`plan_type`. Limite conhecido: é a conta logada no momento do envio, então troca de conta
-dentro da janela de 7 dias atribui os dias antigos à conta atual.
+**Quem gastou, e de qual cota.** São perguntas diferentes e o `envia-gasto.js` manda as duas.
+O time inteiro compartilha **duas contas Codex**: a maioria das pessoas loga com `suporte@`,
+algumas com `vitor@`. Logo a conta **não** identifica a pessoa — ela identifica qual das duas
+cotas está sendo drenada. Quem é a pessoa sai de `maquina` + `usuario`, que é uma por pessoa
+(nesta máquina, por exemplo, o usuário do SO é `filipesodredasilva` e a conta logada é
+`suporte@truthcommerce.com.br`).
+
+Isso importa porque a janela semanal é **compartilhada**: quando alguém quase fecha 100% da
+semana num dia, o estrago cai em todo mundo que usa aquela conta, e a conta sozinha não diz
+em qual máquina olhar.
+
+A conta vem do `auth.json` (claim `email` do `id_token`) — o `session_meta` do log **não**
+guarda conta nenhuma, só `cwd`, `git` e `plan_type`. Limite conhecido: é a conta logada no
+momento do envio, então troca de conta dentro da janela de 7 dias atribui os dias antigos à
+conta atual.
 
 **Onde a cota realmente foi:** as sessões caras estavam em `Documents/API-MercadoLivre`, não no
 agente de layout. Aplicar a mesma disciplina naquele repositório vale mais que qualquer
