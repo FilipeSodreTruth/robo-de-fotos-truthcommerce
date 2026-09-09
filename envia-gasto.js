@@ -29,9 +29,11 @@ const BASE = path.join(os.homedir(), ".codex", "sessions");
 const CONFIG = path.join(os.homedir(), ".codex", "gasto-webhook.txt");
 const MARCA = path.join(os.homedir(), ".codex", ".gasto-enviado");
 
-/* Reenvia sempre os ultimos 7 dias: maquina que ficou desligada nao perde
-   nada, e o n8n sobrescreve as linhas repetidas pela chave. */
-const JANELA = 7;
+/* Quantos dias de pasta varrer no disco. NAO e a janela do relatorio: serve
+   so pra achar as sessoes candidatas. O recorte de verdade e a janela SEMANAL
+   da assinatura (ver janelaSemanal), que tem inicio e fim proprios. 9 da folga
+   pros 7 dias da janela caberem mesmo com fuso e sessao virando o dia. */
+const DIAS_VARREDURA = 9;
 
 const FORCAR = process.argv.includes("--forcar");
 const MOSTRAR = process.argv.includes("--mostrar");
@@ -89,18 +91,19 @@ function lerSessao(arquivo) {
     (texto.match(/"type":"user_message"/g) || []).length ||
     (texto.match(/"role":"user"/g) || []).length;
 
-  let cwd = "";
+  let cwd = "", inicio = 0;
   const primeira = texto.slice(0, texto.indexOf("\n"));
   try {
     const j = JSON.parse(primeira);
     cwd = j.payload?.cwd || j.cwd || "";
+    inicio = Date.parse(j.timestamp || j.payload?.timestamp || "") || 0;
   } catch {}
 
   /* so o nome da loja, nunca o caminho inteiro */
   const projeto = lojaDe(cwd);
   if (!projeto) return null; // nao e sessao de layout
 
-  return { total, entrada, saida, cache, turnos, projeto };
+  return { total, entrada, saida, cache, turnos, projeto, inicio };
 }
 
 /* SO conta sessao de layout. Os dois launchers criam a pasta da loja dentro de
@@ -149,42 +152,81 @@ function contaCodex() {
   return email || null;
 }
 
+/* A janela que importa e a SEMANAL da assinatura, nao "os ultimos 7 dias".
+   O proprio log carrega ela: rate_limits.primary tem window_minutes (10080 =
+   7 dias), used_percent e resets_at (epoch em segundos). Pegamos o snapshot
+   mais recente de todas as sessoes varridas - e por conta, entao vale pra
+   maquina inteira.
+
+   Sem snapshot (Codex antigo, log sem rate_limits) caimos em 7 dias corridos
+   pra tras, que e a aproximacao razoavel. */
+function janelaSemanal(arquivos) {
+  let melhor = null;
+  for (const f of arquivos) {
+    const texto = seguro(() => fs.readFileSync(f, "utf8"));
+    if (!texto) continue;
+    const m = texto.match(/"rate_limits":\{[^{]*"primary":\{[^}]*\}/g);
+    if (!m) continue;
+    const j = seguro(() => JSON.parse("{" + m[m.length - 1] + "}}").rate_limits);
+    const p = j?.primary;
+    if (!p?.resets_at || !p?.window_minutes) continue;
+    if (!melhor || p.resets_at > melhor.resets_at) melhor = p;
+  }
+
+  if (!melhor) {
+    const fim = Date.now();
+    return { inicio: fim - 7 * 864e5, fim, usado_percent: null, estimada: true };
+  }
+  const fim = melhor.resets_at * 1000;
+  return {
+    inicio: fim - melhor.window_minutes * 60000,
+    fim,
+    usado_percent: typeof melhor.used_percent === "number" ? melhor.used_percent : null,
+    estimada: false,
+  };
+}
+
 function coletar() {
-  const dias = [];
-  for (let i = 0; i < JANELA; i++) {
+  /* junta os arquivos dos ultimos dias, descobre a janela semanal e so entao
+     decide quais sessoes entram - por inicio da sessao, nao pela pasta do dia */
+  const arquivos = [];
+  for (let i = 0; i < DIAS_VARREDURA; i++) {
     const [y, m, d] = diasAtras(i);
     const dir = path.join(BASE, y, m, d);
     if (!fs.existsSync(dir)) continue;
-
-    const sessoes = (seguro(() => fs.readdirSync(dir)) || [])
-      .filter((f) => f.endsWith(".jsonl"))
-      .map((f) => lerSessao(path.join(dir, f)))
-      .filter(Boolean);
-    if (!sessoes.length) continue;
-
-    const porProjeto = new Map();
-    for (const s of sessoes) {
-      const p =
-        porProjeto.get(s.projeto) ||
-        { total: 0, entrada: 0, saida: 0, cache: 0, sessoes: 0, turnos: 0, inchadas: 0 };
-      p.total += s.total;
-      p.entrada += s.entrada;
-      p.saida += s.saida;
-      p.cache += s.cache;
-      p.turnos += s.turnos;
-      p.sessoes += 1;
-      if (s.turnos && s.total / s.turnos > 250000) p.inchadas += 1;
-      porProjeto.set(s.projeto, p);
+    for (const f of seguro(() => fs.readdirSync(dir)) || []) {
+      if (f.endsWith(".jsonl")) arquivos.push(path.join(dir, f));
     }
-
-    dias.push({
-      dia: `${y}-${m}-${d}`,
-      projetos: [...porProjeto.entries()]
-        .map(([projeto, p]) => ({ projeto, ...p }))
-        .sort((a, b) => b.total - a.total),
-    });
   }
-  return dias;
+
+  const semana = janelaSemanal(arquivos);
+
+  const porLoja = new Map();
+  for (const f of arquivos) {
+    const ses = lerSessao(f);
+    if (!ses) continue;
+    /* sessao sem timestamp legivel entra: perder gasto e pior que datar mal */
+    if (ses.inicio && (ses.inicio < semana.inicio || ses.inicio > semana.fim)) continue;
+
+    const l =
+      porLoja.get(ses.projeto) ||
+      { total: 0, entrada: 0, saida: 0, cache: 0, sessoes: 0, turnos: 0, inchadas: 0 };
+    l.total += ses.total;
+    l.entrada += ses.entrada;
+    l.saida += ses.saida;
+    l.cache += ses.cache;
+    l.turnos += ses.turnos;
+    l.sessoes += 1;
+    if (ses.turnos && ses.total / ses.turnos > 250000) l.inchadas += 1;
+    porLoja.set(ses.projeto, l);
+  }
+
+  return {
+    semana,
+    lojas: [...porLoja.entries()]
+      .map(([loja, l]) => ({ loja, ...l }))
+      .sort((a, b) => b.total - a.total),
+  };
 }
 
 function main() {
@@ -201,10 +243,10 @@ function main() {
   const ultimo = (seguro(() => fs.readFileSync(MARCA, "utf8")) || "").trim();
   if (!FORCAR && !MOSTRAR && ultimo === hojeISO()) return;
 
-  const dias = coletar();
-  if (!dias.length) {
-    /* normal: maquina que nao fez layout na janela nao tem o que mandar */
-    if (MOSTRAR) console.log("Nenhuma sessao de layout (~/nuvemshop-lojas) nos ultimos " + JANELA + " dias.");
+  const { semana, lojas } = coletar();
+  if (!lojas.length) {
+    /* normal: maquina que nao fez layout na semana nao tem o que mandar */
+    if (MOSTRAR) console.log("Nenhuma sessao de layout (~/nuvemshop-lojas) nesta semana da assinatura.");
     return;
   }
 
@@ -215,8 +257,16 @@ function main() {
        vitor@) - nao e a pessoa: quem gastou sai de maquina + usuario */
     conta: contaCodex(),
     enviado_em: new Date().toISOString(),
-    janela_dias: JANELA,
-    dias,
+    /* a semana da assinatura, nao 7 dias corridos. usado_percent e da CONTA
+       inteira (compartilhada), nao so desta maquina - por isso vem junto das
+       lojas: da pra ver quanto da cota comum foi drenada e por quais lojas. */
+    semana: {
+      inicio: new Date(semana.inicio).toISOString(),
+      reseta_em: new Date(semana.fim).toISOString(),
+      usado_percent: semana.usado_percent,
+      estimada: semana.estimada,
+    },
+    lojas,
   };
 
   if (MOSTRAR) {

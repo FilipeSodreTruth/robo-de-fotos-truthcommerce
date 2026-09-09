@@ -173,18 +173,23 @@ guarda conta nenhuma, só `cwd`, `git` e `plan_type`. Limite conhecido: é a con
 momento do envio, então troca de conta dentro da janela de 7 dias atribui os dias antigos à
 conta atual.
 
-**Onde a cota realmente foi.** Medido no histórico completo de uma máquina (2026-09-09,
-2.539M de tokens em 3.464 sessões):
+**A janela é a da assinatura, não "7 dias corridos".** O próprio log carrega ela:
+`rate_limits.primary` traz `window_minutes` (10080 = 7 dias), `used_percent` e `resets_at`
+(epoch em segundos). O `envia-gasto.js` lê o snapshot mais recente e recorta por ele — numa
+medição de 2026-09-09 a semana ia de 08/09 08:10 a 15/09 08:10, com 37% já consumidos. O
+`used_percent` é da **conta inteira**, que é compartilhada, então ele vem no payload junto das
+lojas: dá para ver quanto da cota comum foi drenada e por quais lojas.
 
-| Pasta | Tokens | Sessões |
-|---|---:|---:|
-| `API-MercadoLivre` | 2.246M | 352 |
-| robô de imagens (`codex-img-*`) | 130M | 3.074 |
-| layout (`nuvemshop-lojas`) | **18M** | 5 |
-| outros projetos avulsos | 145M | 33 |
+**Cuidado com medição de uma máquina só.** O único levantamento que existe até agora é da
+máquina do Filipe, que é justamente quem **menos** faz layout: lá o layout é ~18M de tokens
+contra 2.246M de `API-MercadoLivre`, ou seja 0,7%. Isso **não** diz que layout é 0,7% do
+consumo do time — diz que não é o Filipe que faz layout. Quem faz está em outras máquinas, e
+o consumo delas ninguém nunca viu. É exatamente esse buraco que o envio consolidado fecha:
+até ele funcionar, qualquer conclusão sobre o peso do layout é chute.
 
-Layout é **0,7%** do consumo. A disciplina de sessão vale muito mais aplicada ao repositório do
-MercadoLivre do que aqui — e é bom lembrar disso antes de gastar esforço otimizando este lado.
+O que a medição de fato mostrou, e vale: o robô de imagens do AutomaTruth gera milhares de
+pastas `codex-img-*` descartáveis (3.074 sessões numa máquina), e `API-MercadoLivre` domina o
+consumo de quem mexe nele. Por isso o filtro de `nuvemshop-lojas` existe.
 
 **Não monitorar cota semanal** (nem de time): `/status` dentro da sessão do Codex já mostra o
 restante. O vigia cuida só do tamanho da sessão, que é o que ninguém percebe sozinho.
