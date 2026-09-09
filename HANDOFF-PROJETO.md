@@ -149,6 +149,16 @@ cache $0,34 + saída $0,14) ou ~$1,41 em Sol. O cache foi 93% do volume e 46% do
 tem desconto de 90%. Menos de um dólar por ajuste completo — o gargalo do negócio é tempo de
 pessoa, não token. (A ordem de grandeza se sustenta mesmo se o volume estiver dobrado.)
 
+**Sem segredo, de propósito.** O envio não usa autenticação. O launcher vive num repositório
+público e se auto-atualiza, então exigir um segredo obrigaria a visitar cada PC do time para
+plantá-lo — e ele não poderia vir do repo. O que se aceita em troca: quem descobrir a URL
+consegue inserir linha falsa na tabela. O dado é contador agregado de token, a tela é só de
+admin e nada ali alimenta decisão automática. Decisão do dono em 2026-09-09.
+
+Fechar depois não exige mexer em código: basta definir `GASTO_LAYOUT_TOKEN` no ambiente do
+AutomaTruth e pôr o mesmo valor na 2ª linha de `~/.codex/gasto-webhook.txt`. A rota já trata a
+env como opcional, e há teste travando os dois modos.
+
 **O envio cobre só layout.** `envia-gasto.js` manda apenas sessões cujo `cwd` está dentro de
 `~/nuvemshop-lojas` — o `BASE` que os dois launchers usam para criar a pasta da loja. A loja é
 o primeiro segmento depois dele. Fica de fora tudo que a pessoa abra por fora e, principalmente,
@@ -305,11 +315,10 @@ visibilidade de categoria, API de blog, e — atenção — o **timeout de webho
 - [ ] Levar a disciplina de sessão/handoff para o repositório do MercadoLivre
 - [ ] Conferir se alguém do time está com o modo "fast" ligado (aumenta consumo); o auto-review
       consumiu ~8% de uma semana relendo transcript
-- [ ] **Ligar o envio para o AutomaTruth em cada máquina.** O destino já é a aba "Layout
-      Nuvemshop" de `/usage` (rota `POST /api/codex/layout-spend`). Falta, uma vez por
-      máquina, gravar as duas linhas em `~/.codex/gasto-webhook.txt` (URL + segredo) e, do
-      lado do servidor, definir `GASTO_LAYOUT_TOKEN`. Enquanto isso não acontece, nenhuma
-      máquina aparece na aba
+- [ ] **Conferir a aba "Layout Nuvemshop" depois que a primeira máquina abrir.** O envio já
+      aponta para `POST /api/codex/layout-spend` e o launcher escreve o destino sozinho na
+      primeira abertura — não é preciso visitar PC nenhum. Falta só alguém que de fato faz
+      layout abrir o atalho e a linha aparecer
 - [ ] Biblioteca de componentes (abaixo)
 
 ## Próximo passo combinado: biblioteca de componentes

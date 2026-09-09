@@ -135,6 +135,11 @@ if exist "%PASTA%\AGENTS.md.novo" (
   curl -fsSL "%RAW%/vigia.js" -o "%USERPROFILE%\.codex\vigia.js" >nul 2>&1
   curl -fsSL "%RAW%/gasto.js" -o "%USERPROFILE%\.codex\gasto.js" >nul 2>&1
   curl -fsSL "%RAW%/envia-gasto.js" -o "%USERPROFILE%\.codex\envia-gasto.js" >nul 2>&1
+  rem Destino do envio de consumo, uma vez por maquina. So cria se faltar: quem ja
+  rem tem o arquivo pode ter posto um segredo na 2a linha.
+  if not exist "%USERPROFILE%\.codex\gasto-webhook.txt" (
+    echo https://automatruth-automatruth.wflubn.easypanel.host/api/codex/layout-spend>"%USERPROFILE%\.codex\gasto-webhook.txt"
+  )
   if not exist "HANDOFF.md" curl -fsSL "%RAW%/HANDOFF-modelo.md" -o "%PASTA%\HANDOFF.md" >nul 2>&1
   echo   Manuais atualizados.
 ) else (

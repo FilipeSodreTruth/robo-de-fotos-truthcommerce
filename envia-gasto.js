@@ -6,16 +6,14 @@
  * turnos. Nunca conteudo de conversa, nunca caminho completo, nunca token
  * de loja, nunca o id_token em si - so a claim de email dele.
  *
- * O destino fica em ~/.codex/gasto-webhook.txt, uma vez por maquina. Duas
- * linhas: a URL e o segredo (que o AutomaTruth conhece como GASTO_LAYOUT_TOKEN).
+ * O destino fica em ~/.codex/gasto-webhook.txt. NAO precisa criar na mao: o
+ * nova-loja escreve na primeira abertura, entao ninguem visita PC nenhum.
  *
- *     printf '%s\n%s\n' \
- *       "https://automatruth-automatruth.wflubn.easypanel.host/api/codex/layout-spend" \
- *       "SEGREDO-COMBINADO" > ~/.codex/gasto-webhook.txt
- *
- * Fica fora do repositorio de proposito — ele e publico, e URL de ingestao em
- * repositorio publico qualquer um posta lixo nela. O segredo vai no cabecalho
- * X-Gasto-Token; sem ele a rota responde 401.
+ * Primeira linha: a URL. Segunda linha, OPCIONAL: um segredo, mandado no
+ * cabecalho X-Gasto-Token. Hoje o AutomaTruth aceita sem segredo, de proposito -
+ * o que trafega e contador agregado de token e a tela e so de admin. Se um dia
+ * a env GASTO_LAYOUT_TOKEN for definida la, ela passa a ser exigida e a segunda
+ * linha vira obrigatoria.
  *
  * Ate 2026-08 o destino era um webhook do n8n. O n8n saiu de uso em 2026-08-20 e
  * o envio passou a falhar calado — por isso a troca.

@@ -149,6 +149,12 @@ if curl -fsSL "$RAW/$MODO/AGENTS.md" -o AGENTS.md.novo 2>/dev/null; then
   curl -fsSL "$RAW/vigia.js" -o "$HOME/.codex/vigia.js" 2>/dev/null
   curl -fsSL "$RAW/gasto.js" -o "$HOME/.codex/gasto.js" 2>/dev/null
   curl -fsSL "$RAW/envia-gasto.js" -o "$HOME/.codex/envia-gasto.js" 2>/dev/null
+  # Destino do envio de consumo. Escrito UMA vez por maquina, aqui, pra ninguem
+  # ter que visitar PC do time. So cria se faltar: quem ja tem o arquivo pode ter
+  # posto um segredo na 2a linha, e sobrescrever apagaria isso.
+  if [ ! -f "$HOME/.codex/gasto-webhook.txt" ]; then
+    echo "https://automatruth-automatruth.wflubn.easypanel.host/api/codex/layout-spend" > "$HOME/.codex/gasto-webhook.txt"
+  fi
   [ -f "HANDOFF.md" ] || curl -fsSL "$RAW/HANDOFF-modelo.md" -o HANDOFF.md
   echo "  Manuais atualizados."
 else
