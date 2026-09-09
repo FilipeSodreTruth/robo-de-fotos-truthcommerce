@@ -137,12 +137,35 @@ equivocada. `gasto.js` e `vigia.js` sempre usaram `total_tokens` puro e sempre e
 certos. Só o `envia-gasto.js` somava o cache, inflando o número em ~2x (49,41M reportados
 contra 25,35M reais numa janela de 7 dias) — corrigido em 2026-09-09.
 
-**Cuidado ao reusar os números abaixo:** a calibragem do vigia e a referência de "sessão
-normal" foram estabelecidas sob a premissa errada acima e podem estar dobradas. Refazer com
-`gasto.js sessoes` antes de tratar qualquer um deles como verdade.
+**O que consome a cota é token NOVO, não o total.** Medido em 2026-09-09 sobre 3.464 sessões
+reais: o total é 99,6% entrada, e 94% dela é **cache** — que quase não pesa na cota.
+Correlacionando janelas semanais com a % consumida, o total erra por um fator de **2473x** e o
+token novo por **112x**. Uma sessão de 183M totais custou o mesmo que uma de 285M, porque as
+duas tinham ~5M de token novo.
 
-**Calibragem atual (suspeita, ver acima):** avisos por sessão em 3M / 6M / 12M (o último repete
-a cada 5 min). Referência anotada na época: sessão normal e concluída = ~1,8M, ~91k por turno.
+Token novo = `input_tokens - cached_input_tokens + output_tokens`. É o que o agente **lê pela
+primeira vez** (arquivo, página, snapshot) mais o que escreve — não é o tamanho da conversa.
+Por isso a regra do `browser_snapshot` vale mais para a cota do que "sessão curta".
+
+**A semana vale ~6M de token novo** (ordem de grandeza; os 112x de dispersão são provavelmente
+peso por modelo):
+
+| | token novo | % da semana |
+|---|---:|---:|
+| sessão de layout medida (média de 4) | 166k | **2,8%** |
+| sessão mediana, qualquer projeto | 16k | 0,27% |
+| pior sessão já registrada | 7,1M | **118%** |
+
+Duas pessoas fazendo layout gastam a semana em ~2,6 sessões por dia cada. **Mas layout não é
+quem esvazia:** no histórico de uma máquina, `API-MercadoLivre` são 14,4 semanas de cota e o
+robô de imagens 9,1 (ele roda em `codex-img-*` isolado, mas usa o MESMO `auth.json`). Layout é
+0,1 semana. O aperto vem de dividir a conta — separar os pools resolve mais que qualquer
+economia dentro da sessão.
+
+**Avisos do vigia, em % da semana** (2026-09-09): 1,7% / 4% / 8% de token novo, o último
+repetindo a cada 5 min. Antes eram 0,8M / 2M / 4M de token TOTAL, que media a coisa errada — uma
+sessão de layout que disparava o alarme antigo tinha custado 0,9% da semana. Com os cortes
+novos, as 3.074 sessões do robô de imagens ficam caladas e as pesadas avisam.
 
 **Custo real por trabalho:** aquela sessão de 1,8M custaria ~$0,73 em Terra (entrada $0,25 +
 cache $0,34 + saída $0,14) ou ~$1,41 em Sol. O cache foi 93% do volume e 46% do custo, porque

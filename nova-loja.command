@@ -178,6 +178,14 @@ if [ "$FALHOU" = "0" ]; then
   baixar "vigia.js"        "$HOME/.codex/vigia.js"        || true
   baixar "gasto.js"        "$HOME/.codex/gasto.js"        || true
   baixar "envia-gasto.js"  "$HOME/.codex/envia-gasto.js"  || true
+
+  # Destino do envio de consumo, uma vez por maquina. Sem este arquivo o
+  # envia-gasto sai calado (ver o comentario mais abaixo) e o AutomaTruth nunca
+  # recebe nada - por isso ele e criado AQUI, e nao a mao em cada PC.
+  # So cria se faltar: quem ja tem pode ter posto um segredo na 2a linha.
+  if [ ! -f "$HOME/.codex/gasto-webhook.txt" ]; then
+    echo "https://automatruth-automatruth.wflubn.easypanel.host/api/codex/layout-spend" > "$HOME/.codex/gasto-webhook.txt"
+  fi
   [ -f "HANDOFF.md" ] || baixar "HANDOFF-modelo.md" "HANDOFF.md" || true
 
   echo "  Manuais atualizados."
