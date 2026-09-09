@@ -305,10 +305,11 @@ visibilidade de categoria, API de blog, e — atenção — o **timeout de webho
 - [ ] Levar a disciplina de sessão/handoff para o repositório do MercadoLivre
 - [ ] Conferir se alguém do time está com o modo "fast" ligado (aumenta consumo); o auto-review
       consumiu ~8% de uma semana relendo transcript
-- [ ] **Apontar o `envia-gasto.js` para o AutomaTruth** — hoje o destino é um webhook n8n, e o
-      n8n saiu de uso em 2026-08-20, então o envio falha calado. O AutomaTruth já tem
-      `/usage` (admin) com custo de IA e janela do Codex por conta; a chave de junção é o
-      e-mail da conta, que o payload já manda
+- [ ] **Ligar o envio para o AutomaTruth em cada máquina.** O destino já é a aba "Layout
+      Nuvemshop" de `/usage` (rota `POST /api/codex/layout-spend`). Falta, uma vez por
+      máquina, gravar as duas linhas em `~/.codex/gasto-webhook.txt` (URL + segredo) e, do
+      lado do servidor, definir `GASTO_LAYOUT_TOKEN`. Enquanto isso não acontece, nenhuma
+      máquina aparece na aba
 - [ ] Biblioteca de componentes (abaixo)
 
 ## Próximo passo combinado: biblioteca de componentes

@@ -1,18 +1,24 @@
 #!/usr/bin/env node
 /*
- * envia-gasto.js — manda o resumo de consumo desta maquina para o n8n.
+ * envia-gasto.js — manda o resumo de consumo desta maquina para o AutomaTruth.
  *
  * Envia SO numeros agregados: conta Codex, pasta do projeto, tokens, sessoes,
  * turnos. Nunca conteudo de conversa, nunca caminho completo, nunca token
  * de loja, nunca o id_token em si - so a claim de email dele.
  *
- * A URL do webhook fica em ~/.codex/gasto-webhook.txt, uma vez por maquina:
+ * O destino fica em ~/.codex/gasto-webhook.txt, uma vez por maquina. Duas
+ * linhas: a URL e o segredo (que o AutomaTruth conhece como GASTO_LAYOUT_TOKEN).
  *
- *     echo "https://SEU-N8N/webhook/gasto-codex" > ~/.codex/gasto-webhook.txt
+ *     printf '%s\n%s\n' \
+ *       "https://automatruth-automatruth.wflubn.easypanel.host/api/codex/layout-spend" \
+ *       "SEGREDO-COMBINADO" > ~/.codex/gasto-webhook.txt
  *
- * Fica fora do repositorio de proposito — ele e publico, e webhook em
- * repositorio publico qualquer um posta lixo nele. Segunda linha do arquivo,
- * opcional: um segredo, mandado no cabecalho X-Gasto-Token.
+ * Fica fora do repositorio de proposito — ele e publico, e URL de ingestao em
+ * repositorio publico qualquer um posta lixo nela. O segredo vai no cabecalho
+ * X-Gasto-Token; sem ele a rota responde 401.
+ *
+ * Ate 2026-08 o destino era um webhook do n8n. O n8n saiu de uso em 2026-08-20 e
+ * o envio passou a falhar calado — por isso a troca.
  *
  * Sem esse arquivo o script sai calado e nao atrapalha nada.
  *
