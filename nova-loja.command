@@ -148,6 +148,7 @@ if curl -fsSL "$RAW/$MODO/AGENTS.md" -o AGENTS.md.novo 2>/dev/null; then
   curl -fsSL "$RAW/settings.json" -o .claude/settings.json
   curl -fsSL "$RAW/vigia.js" -o "$HOME/.codex/vigia.js" 2>/dev/null
   curl -fsSL "$RAW/gasto.js" -o "$HOME/.codex/gasto.js" 2>/dev/null
+  curl -fsSL "$RAW/envia-gasto.js" -o "$HOME/.codex/envia-gasto.js" 2>/dev/null
   [ -f "HANDOFF.md" ] || curl -fsSL "$RAW/HANDOFF-modelo.md" -o HANDOFF.md
   echo "  Manuais atualizados."
 else
@@ -192,6 +193,12 @@ echo ""
 echo "  Escreva o que você quer mudar na loja. O agente conduz o resto."
 echo "  ----------------------------------------"
 echo ""
+
+# resumo de consumo para o n8n — uma vez por dia, em segundo plano.
+# Sai calado se ~/.codex/gasto-webhook.txt nao existir nesta maquina.
+if [ -f "$HOME/.codex/envia-gasto.js" ]; then
+  node "$HOME/.codex/envia-gasto.js" >/dev/null 2>&1 &
+fi
 
 # vigia de gasto em segundo plano — avisa se a sessao ficar cara
 VIGIA=""

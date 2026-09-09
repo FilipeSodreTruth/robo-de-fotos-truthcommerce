@@ -134,6 +134,7 @@ if exist "%PASTA%\AGENTS.md.novo" (
   curl -fsSL "%RAW%/settings.json" -o "%PASTA%\.claude\settings.json" >nul 2>&1
   curl -fsSL "%RAW%/vigia.js" -o "%USERPROFILE%\.codex\vigia.js" >nul 2>&1
   curl -fsSL "%RAW%/gasto.js" -o "%USERPROFILE%\.codex\gasto.js" >nul 2>&1
+  curl -fsSL "%RAW%/envia-gasto.js" -o "%USERPROFILE%\.codex\envia-gasto.js" >nul 2>&1
   if not exist "HANDOFF.md" curl -fsSL "%RAW%/HANDOFF-modelo.md" -o "%PASTA%\HANDOFF.md" >nul 2>&1
   echo   Manuais atualizados.
 ) else (
@@ -176,6 +177,12 @@ echo.
 echo   Escreva o que voce quer mudar na loja. O agente conduz o resto.
 echo   ----------------------------------------
 echo.
+
+REM resumo de consumo para o n8n - uma vez por dia, em segundo plano.
+REM Sai calado se %USERPROFILE%\.codex\gasto-webhook.txt nao existir nesta maquina.
+if exist "%USERPROFILE%\.codex\envia-gasto.js" (
+  start /b "" node "%USERPROFILE%\.codex\envia-gasto.js" >nul 2>&1
+)
 
 REM vigia de gasto em segundo plano - avisa se a sessao ficar cara
 if exist "%USERPROFILE%\.codex\vigia.js" (
