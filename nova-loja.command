@@ -8,6 +8,10 @@
 # Endereço dos manuais (o repositório precisa estar PÚBLICO)
 RAW="https://raw.githubusercontent.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/main"
 
+# Espelho: quando o raw.githubusercontent devolve 503 (acontece), este
+# caminho passa pelo github.com e costuma responder.
+ESPELHO="https://github.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/raw/main"
+
 # Onde as pastas dos clientes ficam
 BASE="$HOME/nuvemshop-lojas"
 
@@ -15,12 +19,26 @@ BASE="$HOME/nuvemshop-lojas"
 MODELO_PADRAO="gpt-5.6-terra"
 
 # ------------------------------------------------------------
+#  baixar <caminho-no-repositorio> <destino>
+#  Tenta o raw com 3 tentativas (o -f faz o curl tratar 5xx como erro e o
+#  --retry cobre justamente 429/5xx), depois cai para o espelho.
+#  Devolve 1 em vez de derrubar o script: quem chama decide o que fazer.
+# ------------------------------------------------------------
+baixar() {
+  curl -fsSL --retry 3 --retry-delay 2 --connect-timeout 10 \
+       "$RAW/$1" -o "$2" 2>/dev/null && return 0
+  curl -fsSL --retry 2 --retry-delay 2 --connect-timeout 10 \
+       "$ESPELHO/$1" -o "$2" 2>/dev/null && return 0
+  return 1
+}
+
+# ------------------------------------------------------------
 #  Auto-atualizacao: pega a versao mais nova deste proprio atalho
 #  antes de qualquer coisa. Roda uma vez so (a variavel evita loop).
 # ------------------------------------------------------------
 if [ -z "$AGENTE_ATUALIZADO" ]; then
   NOVO=$(mktemp)
-  if curl -fsSL "$RAW/nova-loja.command" -o "$NOVO" 2>/dev/null \
+  if baixar "nova-loja.command" "$NOVO" \
      && [ -s "$NOVO" ] && head -1 "$NOVO" | grep -q '^#!/bin/bash' \
      && ! cmp -s "$NOVO" "$0"; then
     cat "$NOVO" > "$0" && chmod +x "$0"
@@ -138,34 +156,42 @@ else
   echo "$MODO" > .modo
 fi
 
-# baixa a versão atual dos manuais, sempre
+# Baixa a versao atual dos manuais, sempre.
+#
+# Antes, um curl sem protecao aqui derrubava o script inteiro por causa do
+# `set -e`: bastava um 503 no meio e a janela fechava sozinha, com a pasta
+# meio atualizada. Agora nada aqui aborta a abertura.
 echo "  Atualizando os manuais..."
-if curl -fsSL "$RAW/$MODO/AGENTS.md" -o AGENTS.md.novo 2>/dev/null; then
+
+FALHOU=0
+baixar "$MODO/AGENTS.md" "AGENTS.md.novo" || FALHOU=1
+baixar "$MODO/CLAUDE.md" "CLAUDE.md.novo" || FALHOU=1
+
+if [ "$FALHOU" = "0" ]; then
+  # so troca os manuais quando os dois chegaram inteiros
   mv AGENTS.md.novo AGENTS.md
-  curl -fsSL "$RAW/$MODO/CLAUDE.md" -o CLAUDE.md
-  mkdir -p codigo/_anterior
-  mkdir -p .claude
-  curl -fsSL "$RAW/settings.json" -o .claude/settings.json
-  curl -fsSL "$RAW/vigia.js" -o "$HOME/.codex/vigia.js" 2>/dev/null
-  curl -fsSL "$RAW/gasto.js" -o "$HOME/.codex/gasto.js" 2>/dev/null
-  curl -fsSL "$RAW/envia-gasto.js" -o "$HOME/.codex/envia-gasto.js" 2>/dev/null
-  # Destino do envio de consumo. Escrito UMA vez por maquina, aqui, pra ninguem
-  # ter que visitar PC do time. So cria se faltar: quem ja tem o arquivo pode ter
-  # posto um segredo na 2a linha, e sobrescrever apagaria isso.
-  if [ ! -f "$HOME/.codex/gasto-webhook.txt" ]; then
-    echo "https://automatruth-automatruth.wflubn.easypanel.host/api/codex/layout-spend" > "$HOME/.codex/gasto-webhook.txt"
-  fi
-  [ -f "HANDOFF.md" ] || curl -fsSL "$RAW/HANDOFF-modelo.md" -o HANDOFF.md
+  mv CLAUDE.md.novo CLAUDE.md
+  mkdir -p codigo/_anterior .claude
+
+  # acessorios: se um falhar, segue com o que ja existe na maquina
+  baixar "settings.json"   ".claude/settings.json"        || true
+  baixar "vigia.js"        "$HOME/.codex/vigia.js"        || true
+  baixar "gasto.js"        "$HOME/.codex/gasto.js"        || true
+  baixar "envia-gasto.js"  "$HOME/.codex/envia-gasto.js"  || true
+  [ -f "HANDOFF.md" ] || baixar "HANDOFF-modelo.md" "HANDOFF.md" || true
+
   echo "  Manuais atualizados."
 else
-  rm -f AGENTS.md.novo
+  rm -f AGENTS.md.novo CLAUDE.md.novo
   if [ -f "AGENTS.md" ]; then
-    echo "  Nao consegui atualizar os manuais (sem internet ou repositorio fora do ar)."
-    echo "  Seguindo com a versao que ja esta na pasta."
+    echo "  Nao consegui atualizar os manuais (GitHub fora do ar ou sem internet)."
+    echo "  Seguindo com a versao que ja esta na pasta - o trabalho nao para."
   else
     echo ""
-    echo "  ERRO: nao consegui baixar os manuais e nao ha copia local."
-    echo "  Avise quem cuida do repositorio. Feche esta janela."
+    echo "  ERRO: nao consegui baixar os manuais e nao ha copia local nesta pasta."
+    echo "  Tente de novo em alguns minutos. Se insistir, avise o time."
+    echo ""
+    echo "  Aperte qualquer tecla para fechar."
     read -n 1 -s
     exit 1
   fi
