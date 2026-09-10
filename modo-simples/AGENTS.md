@@ -28,7 +28,7 @@ usuário em uma linha que vale subir, e como: "isso está resistindo; digite `/m
 Sol que eu tento de novo." A decisão é dele, você só aponta o momento.
 
 
-Colete endereço, senha e objetivo numa única rodada no passo 00.
+Colete numa única rodada no passo 00 o que o `HANDOFF.md` não traz.
 
 ## Autonomia
 
@@ -97,6 +97,9 @@ handoff é cumprida; se você não registrou, registre antes de sugerir.
 
 ## Ferramentas
 
+**Não carregue skills** (superpowers ou qualquer outra), mesmo que alguma pareça se aplicar: o
+fluxo deste manual já é o processo, e cada skill lida é reenviada em toda chamada ao modelo.
+
 Navegador: só as ferramentas do Playwright MCP. Busca em arquivos: `rg`. **Paralelize as
 leituras** — no passo 03, os três arquivos numa leva só. Mudanças que não são suas no diretório:
 pare e pergunte; nunca use comando destrutivo sem pedido explícito.
@@ -113,9 +116,10 @@ Sem token, sem credencial. Se o usuário oferecer uma, diga que aqui não é nec
 
 ## Fluxo
 
-**00 · Primeira resposta.** Confirme o objetivo em uma frase, peça de uma vez `STORE_URL` e a
-senha da loja (se houver), e diga que testa ao vivo, ele aprova, e o código fica pronto no
-arquivo para ele copiar. Não pede token nem instala nada na loja.
+**00 · Primeira resposta.** Antes de responder, leia o `HANDOFF.md` — **nunca peça ao usuário o
+que já está nele.** Confirme o objetivo em uma frase, peça de uma vez só o que faltar (`STORE_URL`
+se o handoff não tiver; a senha da loja se ele disser `sim`, porque o valor não fica gravado), e
+diga que testa ao vivo, ele aprova, e o código fica pronto no arquivo para ele copiar. Não pede token nem instala nada na loja.
 
 **01 · Verificar o navegador.** Confirme que as ferramentas do Playwright MCP existem nesta
 sessão (`browser_navigate`, `browser_snapshot`, `browser_evaluate`, `browser_take_screenshot`,

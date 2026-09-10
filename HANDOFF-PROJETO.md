@@ -96,6 +96,28 @@ continuaria só com o arquivo?* Gatilhos de escrita: publicação confirmada, de
 sobre **como** trabalhar, armadilha do tema descoberta, falha com causa identificada, e antes
 de qualquer espera longa.
 
+**Nunca pedir o que já está na pasta.** Falhou na prática (2026-09-10, newstore): o passo 00
+mandava pedir URL, senha, TOKEN e THEME_ID na primeira resposta, e o handoff só era lido no
+passo 03 — o agente pediu tudo com URL e tema gravados no handoff, e ainda disse que o token não
+fica guardado. Fica: na CLI 1.2.x, `theme authorize --token` grava o `.nube` na pasta (token,
+loja e installationId) e `pull`/`push` leem dele — `--token`/`--theme-id` não existem mais. Agora
+o passo 00 lê o handoff e checa o `.nube`, e o passo 02 testa com `theme installation list`
+antes de pedir token novo. Na mesma versão, "trocar o tema no ar" virou `theme installation
+publish` — a trava de `theme publish` não pegava o nome novo; o `settings.json` agora bloqueia
+`theme installation publish` e `theme installation delete` também.
+
+**Sem skills no agente de layout.** Medido em 2026-09-10 (newstore): com superpowers instalado em
+`~/.codex/skills`, o agente carregou brainstorming, systematic-debugging, writing-plans e TDD
+num ajuste de CSS. A lista de skills (~2,4 mil tokens) mais as lidas (7–9 mil) são reenviadas a
+cada chamada — 7% a 19% do total dessas sessões, sem contar os passos extras que elas induzem.
+O manual proíbe; a using-superpowers declara que AGENTS.md/CLAUDE.md têm precedência. O Codex
+0.153 não tem chave estável para desligar skills, então é só instrução.
+
+**`envia-gasto.js` não conta sub-agente como sessão nem turno.** O guardian (avalia aprovações)
+grava sessão própria e respondia por 29 dos 42 "turnos" de uma máquina; os tokens dele continuam
+no total, porque são cota real. Turno agora é mensagem digitada — o fallback antigo por
+`"role":"user"` contava também o AGENTS.md injetado.
+
 **`HANDOFF.md` por loja tem três seções:** *Decisões e preferências* (vale para sempre),
 *Armadilhas deste tema*, *Histórico*. Decisão sobre método não envelhece junto com o log.
 

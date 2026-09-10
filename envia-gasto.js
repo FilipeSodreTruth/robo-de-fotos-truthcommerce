@@ -91,23 +91,32 @@ function lerSessao(arquivo) {
   }
   if (!total) return null;
 
-  const turnos =
-    (texto.match(/"type":"user_message"/g) || []).length ||
-    (texto.match(/"role":"user"/g) || []).length;
-
-  let cwd = "", inicio = 0;
+  let cwd = "", inicio = 0, subagente = false;
   const primeira = texto.slice(0, texto.indexOf("\n"));
   try {
     const j = JSON.parse(primeira);
     cwd = j.payload?.cwd || j.cwd || "";
     inicio = Date.parse(j.timestamp || j.payload?.timestamp || "") || 0;
+    /* sub-agente (o guardian que avalia aprovacao, ou spawn_agent): o token e
+       gasto real da cota e entra no total, mas nao e sessao que alguem abriu
+       nem turno de pessoa. Medido em 2026-09-10: o guardian respondia por 29
+       dos 42 "turnos" de uma maquina. */
+    subagente = Boolean(j.payload?.source?.subagent);
   } catch {}
+
+  /* Turno = mensagem que a pessoa digitou. O Codex atual nao grava
+     "user_message" na sessao principal, e contar "role":"user" pegava tambem
+     o AGENTS.md e o contexto de ambiente que ele injeta no inicio. */
+  const turnos = subagente
+    ? 0
+    : (texto.match(/"role":"user","content":\[\{"type":"input_text","text":"(?!# AGENTS\.md instructions|<environment_context>|<user_instructions>)/g) || []).length ||
+      (texto.match(/"type":"user_message"/g) || []).length;
 
   /* so o nome da loja, nunca o caminho inteiro */
   const projeto = lojaDe(cwd);
   if (!projeto) return null; // nao e sessao de layout
 
-  return { total, entrada, saida, cache, turnos, projeto, inicio };
+  return { total, entrada, saida, cache, turnos, projeto, inicio, subagente };
 }
 
 /* SO conta sessao de layout. Os dois launchers criam a pasta da loja dentro de
@@ -220,7 +229,7 @@ function coletar() {
     l.saida += ses.saida;
     l.cache += ses.cache;
     l.turnos += ses.turnos;
-    l.sessoes += 1;
+    if (!ses.subagente) l.sessoes += 1;
     if (ses.turnos && ses.total / ses.turnos > 250000) l.inchadas += 1;
     porLoja.set(ses.projeto, l);
   }

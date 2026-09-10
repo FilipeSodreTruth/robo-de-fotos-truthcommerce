@@ -25,7 +25,7 @@ usuário em uma linha que vale subir, e como: "isso está resistindo; digite `/m
 Sol que eu tento de novo." A decisão é dele, você só aponta o momento.
 
 
-Colete tudo numa única rodada no passo 00.
+Colete numa única rodada no passo 00 — e só o que a pasta da loja não responde.
 
 ## Autonomia
 
@@ -110,6 +110,9 @@ handoff é cumprida; se você não registrou, registre antes de sugerir.
 
 ## Ferramentas
 
+**Não carregue skills** (superpowers ou qualquer outra), mesmo que alguma pareça se aplicar: o
+fluxo deste manual já é o processo, e cada skill lida é reenviada em toda chamada ao modelo.
+
 Navegador: só as ferramentas do Playwright MCP. Busca em arquivos: `rg`. **Paralelize as
 leituras** — no passo 03, todos os arquivos numa leva só. Mudanças que não são suas no diretório:
 pare e pergunte; nunca use comando destrutivo sem pedido explicito.
@@ -117,19 +120,24 @@ pare e pergunte; nunca use comando destrutivo sem pedido explicito.
 ## Parâmetros
 
 ```
-TOKEN      = <passo 02>       THEME_ID  = <passo 02>
-STORE_URL  = <https://sualoja.com.br>
+TOKEN      = <.nube da pasta, ou passo 02>
+THEME_ID   = <HANDOFF.md, ou passo 02>
+STORE_URL  = <HANDOFF.md, ou https://sualoja.com.br>
 SENHA_LOJA = <a senha exibida ao visitante, se a loja tiver acesso restrito>
 ALVO       = <o CSS/JS/HTML a inserir>
 ```
 
-`TOKEN` é credencial: fora de commits e logs. Você roda os comandos e dirige o Playwright; o
+`TOKEN` é credencial: fora de commits e logs. A CLI guarda ele no `.nube` da pasta: confira se o
+arquivo existe, nunca imprima o conteúdo. Você roda os comandos e dirige o Playwright; o
 usuário faz o que só ele pode — logar na loja, copiar o token, informar a senha.
 
 ## Fluxo
 
-**00 · Primeira resposta.** Confirme o objetivo em uma frase. Peca de uma vez `STORE_URL`, senha
-da loja (se houver), `TOKEN` e `THEME_ID` — explicando o passo 02 para ele buscar. Diga que já vai
+**00 · Primeira resposta.** Antes de responder, leia o `HANDOFF.md` e veja se existe `.nube` na
+pasta. **Nunca peça ao usuário o que já está na pasta:** `STORE_URL` e `THEME_ID` vêm do handoff;
+o token, do `.nube` (passo 02). `THEME_ID` nunca se pede — sai do handoff ou do passo 02. Confirme
+o objetivo em uma frase e peça de uma vez só o que faltar: senha da loja se o handoff disser `sim`
+(o valor não fica gravado); `TOKEN` só se não houver `.nube`, explicando o passo 02. Diga que já vai
 preparando as ferramentas em paralelo, e deixe os dois "ok" claros: preview sem publicar, depois
 publicação; a aba só fecha quando ele mandar.
 
@@ -150,22 +158,24 @@ cliente. Nao escreva CSS no escuro para compensar.
 CLI: `node -v` (precisa v18+) e `npm install -g @tiendanube/cli`. `tiendanube` e `nuvemshop` são
 o mesmo binário.
 
-**02 · TOKEN e THEME_ID.** Peca para o usuário abrir, no navegador em que já está logado na loja:
+**02 · Token e tema.** Com `.nube` na pasta, teste antes de pedir: `tiendanube theme installation
+list`. Respondeu → o token vale; siga sem pedir nada. Sem `.nube`, ou erro de autorização → peça
+para o usuário abrir, no navegador em que já está logado na loja:
 `https://brand-editor.tiendanube.com/api/auth/cli/start?region=br` (`latam` fora do Brasil). A
 página devolve um texto longo em Base64 — esse texto **é** o `TOKEN`, não precisa decodificar.
-Com ele: `tiendanube theme list --token $TOKEN` mostra o `THEME_ID`. Se falhar, a loja não tem o
-recurso liberado — pare e avise.
+Grave com `tiendanube theme authorize --token "$TOKEN" -y` (escreve o `.nube`). O `installation
+list` mostra o `THEME_ID`: confira com o do handoff e registre lá se faltar. Se falhar, a loja não
+tem o recurso liberado — pare e avise.
 
 **03 · Baixar o tema inteiro e fazer backup.** Nunca trabalhe com pasta parcial: o push apaga no
 servidor o que não existe local.
 
 ```bash
-tiendanube theme pull --theme-id $THEME_ID --token $TOKEN --yes
+tiendanube theme pull --installation-id $THEME_ID -y
 BACKUP="../$(basename "$PWD")-backup"; rm -rf "$BACKUP" && cp -r . "$BACKUP"
 ```
 
-Depois leia, em paralelo: `HANDOFF.md`, `config/settings_data.json`, `templates/*.json` e os
-`.tpl` relevantes.
+Depois leia, em paralelo: `config/settings_data.json`, `templates/*.json` e os `.tpl` relevantes.
 
 **04 · Reconhecer a página.** Abra `STORE_URL + "?cb=" + aleatorio` — única aba do trabalho
 inteiro. Senha, se pedir.
@@ -192,10 +202,10 @@ Conte os caracteres contra os limites e avise se passar de 80%. Entao:
 ```bash
 # se o usuário pode ter mexido no editor visual desde o pull, refaca o pull antes:
 # o campo de CSS não tem histórico e um push cego apaga o trabalho dele
-tiendanube theme push --theme-id $THEME_ID --token $TOKEN --yes
+tiendanube theme push --installation-id $THEME_ID -y
 ```
 
-Use `theme push`. **Nunca** `theme publish`: ele troca a versão no ar.
+Use `theme push`. **Nunca** `theme installation publish`: ele troca a versão no ar.
 
 **07 · Conferir no servidor.** A mensagem do push não é prova. Rebaixe em pasta temporária
 (`cd "$(mktemp -d)"` e `theme pull`) e leia o arquivo. Não subiu? Corrija e repita.
@@ -214,7 +224,7 @@ Restaure primeiro, investigue depois:
 
 ```bash
 BACKUP="../$(basename "$PWD")-backup"
-cp -r "$BACKUP"/. . && tiendanube theme push --theme-id $THEME_ID --token $TOKEN --yes
+cp -r "$BACKUP"/. . && tiendanube theme push --installation-id $THEME_ID -y
 ```
 
 Confirme que o backup é **desta** loja — restaurar o de outra publicaria o tema errado. Avise que

@@ -26,8 +26,11 @@ mesmo modelo — diga ao usuário em uma linha que vale trocar. A decisão é de
 momento.
 
 
-Colete endereço, senha e objetivo numa única rodada no passo 00: pedido completo de uma vez gasta
-muito menos que descoberta em cinco turnos.
+Colete numa única rodada no passo 00 o que o `HANDOFF.md` não traz: pedido completo de uma vez
+gasta muito menos que descoberta em cinco turnos.
+
+**Não carregue skills** (superpowers ou qualquer outra), mesmo que alguma pareça se aplicar: o
+fluxo deste manual já é o processo, e cada skill lida é reenviada em toda chamada ao modelo.
 </modelo>
 
 <parametros>
@@ -102,9 +105,10 @@ handoff é cumprida; se você não registrou, registre antes de sugerir.
 
 ## Fluxo
 
-**00 · Primeira resposta.** Confirme o objetivo em uma frase, peça de uma vez `STORE_URL` e a
-senha da loja (se houver), e diga que testa ao vivo, ele aprova, e o código fica pronto no
-arquivo para ele copiar. Não pede token nem instala nada na loja.
+**00 · Primeira resposta.** Antes de responder, leia o `HANDOFF.md` — **nunca peça ao usuário o
+que já está nele.** Confirme o objetivo em uma frase, peça de uma vez só o que faltar (`STORE_URL`
+se o handoff não tiver; a senha da loja se ele disser `sim`, porque o valor não fica gravado), e
+diga que testa ao vivo, ele aprova, e o código fica pronto no arquivo para ele copiar. Não pede token nem instala nada na loja.
 
 **01 · Verificar o navegador.** Confirme que as ferramentas do Playwright MCP existem nesta
 sessão (`browser_navigate`, `browser_snapshot`, `browser_evaluate`, `browser_take_screenshot`,

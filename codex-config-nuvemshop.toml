@@ -47,6 +47,8 @@ network_access = true
 #
 #    BLOQUEAR    tiendanube theme publish   (troca a versão no ar — nunca)
 #                nuvemshop theme publish
+#                tiendanube theme installation publish   (nome na CLI 1.2.x)
+#                tiendanube theme installation delete
 #                rm -rf
 #                git reset --hard
 #                git checkout --
