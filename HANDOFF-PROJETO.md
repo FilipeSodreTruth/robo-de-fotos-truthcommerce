@@ -169,6 +169,16 @@ Token novo = `input_tokens - cached_input_tokens + output_tokens`. É o que o ag
 primeira vez** (arquivo, página, snapshot) mais o que escreve — não é o tamanho da conversa.
 Por isso a regra do `browser_snapshot` vale mais para a cota do que "sessão curta".
 
+**Calibrar o vigia pela virada de %, não por correlação** (2026-09-10). O log traz a régua
+real: `rate_limits.primary.used_percent`. Na virada de 6% para 7% da conta, uma máquina gastou
+562 mil tokens novos (Terra medium) — semana ≥ ~56M, não os 6M da correlação acima. Com 6M, o
+aviso de "1,7%" tocava em ~100 mil tokens (~0,2% real): disparava em todo ajuste simples e o
+time parou de ler. Segundo bug: o vigia seguia "o .jsonl mais recente", e o guardian grava
+arquivo próprio — alternava entre os dois, zerava os avisos e repetia (simulado no dia: 10
+trocas, 9 notificações). Agora `SEMANA_NOVO = 50M` e a sessão soma os arquivos do mesmo
+`parent_thread_id`; a mesma simulação dá 0 notificações. Pausa longa custa, mas pouco: 83 min
+parado com 100k de contexto virou uma chamada de 93 mil novos (cache expirado), ~0,2% da semana.
+
 **A semana vale ~6M de token novo** (ordem de grandeza; os 112x de dispersão são provavelmente
 peso por modelo):
 

@@ -23,17 +23,21 @@ const BASE = path.join(os.homedir(), ".codex", "sessions");
 const INICIO = Date.now();
 const INTERVALO = 30_000;
 
-/* A cota semanal vale ~6M de token NOVO (estimado no mesmo levantamento;
-   ordem de grandeza, nao precisao - a dispersao de 112x provavelmente e peso
-   por modelo). Os avisos sao dados em % dessa semana, que e a moeda real.
+/* Quanto token NOVO vale a semana inteira da conta. Os avisos sao dados em %
+   dessa semana, que e a moeda real.
 
-   Calibragem: as sessoes de layout medidas gastaram 40k, 53k, 218k e 352k de
-   token novo. Com os cortes abaixo, as duas leves passam caladas e as duas
-   pesadas avisam - que e o comportamento desejado. Aviso que toca em sessao
-   normal vira ruido e ninguem le.
+   Medido em 2026-09-10 no Terra medium, pela virada de % que o proprio log
+   grava (rate_limits.primary.used_percent): a conta foi de 6% para 7% com 562
+   mil tokens novos DESTA maquina - se alguem do time usou junto, 1% custa
+   ainda mais. Semana >= ~56M. O valor anterior (6M) saiu de uma correlacao com
+   erro de 112x e fazia o aviso de "1,7%" tocar em ~100 mil tokens, ~0,2% real:
+   tocava em todo ajuste simples e virou ruido. 50M arredonda pra baixo, pra
+   avisar um pouco antes do real, nunca depois.
 
-   Recalibrar com `node gasto.js sessoes` depois de uma semana de uso real. */
-const SEMANA_NOVO = 6e6;
+   Com 50M, as sessoes de layout desse dia (0,44M e 0,54M somando o guardian)
+   passam caladas. Modelo diferente pode pesar diferente: recalibrar pela
+   virada de % no log, nao por estimativa. */
+const SEMANA_NOVO = 50e6;
 const AVISOS = [
   { pct: 1.7, titulo: "Sessao ja custou ~1,7% da semana",
     texto: "Escreva 'encerra' para o agente fechar o assunto, depois /new. Nada se perde." },
@@ -44,7 +48,7 @@ const AVISOS = [
 ].map((a) => ({ ...a, em: Math.round((a.pct / 100) * SEMANA_NOVO) }));
 
 let proximo = 0;
-let arquivoVigiado = null;   /* sessao que estamos acompanhando agora */
+let sessaoVigiada = null;   /* id da sessao que estamos acompanhando agora */
 
 /* Passando do ultimo nivel, repete a cada 5 min ate a sessao acabar:
    quem ignorou a primeira notificacao precisa de insistencia. */
@@ -80,10 +84,26 @@ function notificar(titulo, texto) {
   }
 }
 
-/* Acha o .jsonl mais recente criado depois que este vigia comecou:
-   e a sessao que esta rodando agora. */
+/* De qual sessao e um .jsonl. O guardian (sub-agente que avalia aprovacao)
+   grava arquivo proprio, com parent_thread_id apontando pro id da sessao
+   principal - entao a chave e parent_thread_id, senao o proprio id. */
+const sessaoDoArquivo = new Map();
+function sessaoDe(p) {
+  if (sessaoDoArquivo.has(p)) return sessaoDoArquivo.get(p);
+  const primeira = seguro(() => fs.readFileSync(p, "utf8").split("\n", 1)[0]);
+  const meta = seguro(() => JSON.parse(primeira).payload);
+  const id = meta?.parent_thread_id || meta?.id;
+  if (id) sessaoDoArquivo.set(p, id); // sem id: 1a linha ainda sendo escrita, tenta de novo
+  return id || p;
+}
+
+/* A sessao que esta rodando agora (a do .jsonl escrito por ultimo) e TODOS os
+   arquivos dela. Vigiar so "o arquivo mais recente" alternava entre a sessao e
+   o guardian, zerava os avisos a cada troca e repetia a notificacao - simulado
+   sobre 2026-09-10: 10 trocas, 9 avisos. O gasto do guardian e cota real (25% a
+   44% da sessao nesse dia), entao entra na soma. */
 function sessaoAtual() {
-  let melhor = null;
+  const recentes = [];
   const anos = seguro(() => fs.readdirSync(BASE)) || [];
   for (const a of anos) {
     for (const m of seguro(() => fs.readdirSync(path.join(BASE, a))) || []) {
@@ -95,12 +115,14 @@ function sessaoAtual() {
           const st = seguro(() => fs.statSync(p));
           if (!st) continue;
           if (st.mtimeMs < INICIO - 60_000) continue;
-          if (!melhor || st.mtimeMs > melhor.mtimeMs) melhor = { p, mtimeMs: st.mtimeMs };
+          recentes.push({ p, mtimeMs: st.mtimeMs });
         }
       }
     }
   }
-  return melhor && melhor.p;
+  if (!recentes.length) return null;
+  const id = sessaoDe(recentes.reduce((a, b) => (b.mtimeMs > a.mtimeMs ? b : a)).p);
+  return { id, arquivos: recentes.filter((r) => sessaoDe(r.p) === id).map((r) => r.p) };
 }
 
 function seguro(fn) {
@@ -131,17 +153,18 @@ function novoDe(arquivo) {
 }
 
 function tick() {
-  const arquivo = sessaoAtual();
+  const sessao = sessaoAtual();
 
-  /* /new cria um arquivo novo: zera os avisos para a sessao seguinte */
-  if (arquivo && arquivo !== arquivoVigiado) {
-    arquivoVigiado = arquivo;
+  /* /new cria outra sessao (outro id): zera os avisos. O guardian nao conta
+     como sessao nova - ele tem o mesmo id-pai. */
+  if (sessao && sessao.id !== sessaoVigiada) {
+    sessaoVigiada = sessao.id;
     proximo = 0;
     ultimoReforco = 0;
   }
 
-  if (arquivo) {
-    const novo = novoDe(arquivo);
+  if (sessao) {
+    const novo = sessao.arquivos.reduce((s, p) => s + novoDe(p), 0);
     while (proximo < AVISOS.length && novo >= AVISOS[proximo].em) {
       const a = AVISOS[proximo];
       notificar(a.titulo, a.texto);

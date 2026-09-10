@@ -183,7 +183,8 @@ echo   Escreva o que voce quer mudar na loja. O agente conduz o resto.
 echo   ----------------------------------------
 echo.
 
-REM resumo de consumo para o n8n - uma vez por dia, em segundo plano.
+REM resumo de consumo para o AutomaTruth, em segundo plano. Vai de novo ao fechar
+REM o agente (la embaixo); repetir nao soma, o servidor substitui o envio anterior.
 REM Sai calado se %USERPROFILE%\.codex\gasto-webhook.txt nao existir nesta maquina.
 if exist "%USERPROFILE%\.codex\envia-gasto.js" (
   start /b "" node "%USERPROFILE%\.codex\envia-gasto.js" >nul 2>&1
@@ -198,6 +199,12 @@ if "!AGENTE!"=="claude" (
   claude
 ) else (
   codex -p nuvemshop !FLAG_MODELO! --cd "%PASTA%"
+)
+
+REM consumo da sessao que acabou de fechar. Em primeiro plano de proposito:
+REM fechar a janela mataria um envio em segundo plano.
+if exist "%USERPROFILE%\.codex\envia-gasto.js" (
+  node "%USERPROFILE%\.codex\envia-gasto.js" >nul 2>&1
 )
 
 REM encerra o vigia ao fechar o agente

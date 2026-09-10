@@ -20,8 +20,10 @@
  *
  * Sem esse arquivo o script sai calado e nao atrapalha nada.
  *
- * Roda sozinho na abertura do nova-loja, uma vez por dia.
- * Forcar agora:  node ~/.codex/envia-gasto.js --forcar
+ * Roda sozinho ao abrir e ao fechar o agente pelo nova-loja. Ate 2026-09-10 era
+ * uma vez por dia, na abertura: o painel ficava uma sessao (ou um dia) atrasado.
+ * Repetir nao soma - o servidor substitui o envio anterior da mesma semana.
+ * Mandar agora:  node ~/.codex/envia-gasto.js
  * Ver o que iria:  node ~/.codex/envia-gasto.js --mostrar
  */
 
@@ -31,7 +33,6 @@ const os = require("os");
 
 const BASE = path.join(os.homedir(), ".codex", "sessions");
 const CONFIG = path.join(os.homedir(), ".codex", "gasto-webhook.txt");
-const MARCA = path.join(os.homedir(), ".codex", ".gasto-enviado");
 
 /* Quantos dias de pasta varrer no disco. NAO e a janela do relatorio: serve
    so pra achar as sessoes candidatas. O recorte de verdade e a janela SEMANAL
@@ -39,7 +40,6 @@ const MARCA = path.join(os.homedir(), ".codex", ".gasto-enviado");
    pros 7 dias da janela caberem mesmo com fuso e sessao virando o dia. */
 const DIAS_VARREDURA = 9;
 
-const FORCAR = process.argv.includes("--forcar");
 const MOSTRAR = process.argv.includes("--mostrar");
 
 function seguro(fn) {
@@ -48,13 +48,6 @@ function seguro(fn) {
   } catch {
     return null;
   }
-}
-
-function hojeISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
 }
 
 function diasAtras(n) {
@@ -252,10 +245,6 @@ function main() {
 
   if (!MOSTRAR && (!url || !url.startsWith("http"))) return;
 
-  /* uma vez por dia, salvo --forcar */
-  const ultimo = (seguro(() => fs.readFileSync(MARCA, "utf8")) || "").trim();
-  if (!FORCAR && !MOSTRAR && ultimo === hojeISO()) return;
-
   const { semana, lojas } = coletar();
   if (!lojas.length) {
     /* normal: maquina que nao fez layout na semana nao tem o que mandar */
@@ -295,15 +284,10 @@ function main() {
     headers: cabecalhos,
     body: JSON.stringify(corpo),
     signal: AbortSignal.timeout(10000),
-  })
-    .then((r) => {
-      /* so grava a marca se o n8n aceitou: falhou, tenta na proxima abertura */
-      if (r.ok) seguro(() => fs.writeFileSync(MARCA, hojeISO()));
-    })
-    .catch(() => {
-      /* sem internet, n8n fora do ar: sair calado. Isto nunca pode
-         atrapalhar quem so quer abrir o agente. */
-    });
+  }).catch(() => {
+    /* sem internet, AutomaTruth fora do ar: sair calado. Isto nunca pode
+       atrapalhar quem so quer abrir ou fechar o agente. */
+  });
 }
 
 main();

@@ -234,7 +234,8 @@ echo "  Escreva o que você quer mudar na loja. O agente conduz o resto."
 echo "  ----------------------------------------"
 echo ""
 
-# resumo de consumo para o n8n — uma vez por dia, em segundo plano.
+# resumo de consumo para o AutomaTruth, em segundo plano. Vai de novo ao fechar
+# o agente (la embaixo); repetir nao soma, o servidor substitui o envio anterior.
 # Sai calado se ~/.codex/gasto-webhook.txt nao existir nesta maquina.
 if [ -f "$HOME/.codex/envia-gasto.js" ]; then
   node "$HOME/.codex/envia-gasto.js" >/dev/null 2>&1 &
@@ -253,6 +254,13 @@ if [ "$AGENTE" = "claude" ]; then
   claude
 else
   codex -p nuvemshop $FLAG_MODELO --cd "$PASTA"
+fi
+
+# consumo da sessao que acabou de fechar - so o envio da abertura deixava o
+# painel uma sessao atrasado. Em primeiro plano de proposito: fechar a janela
+# mataria um envio em segundo plano. Sem internet, desiste em ate 10s.
+if [ -f "$HOME/.codex/envia-gasto.js" ]; then
+  node "$HOME/.codex/envia-gasto.js" >/dev/null 2>&1
 fi
 
 limpar
