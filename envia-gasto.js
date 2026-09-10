@@ -176,7 +176,12 @@ function janelaSemanal(arquivos) {
     const j = seguro(() => JSON.parse("{" + m[m.length - 1] + "}}").rate_limits);
     const p = j?.primary;
     if (!p?.resets_at || !p?.window_minutes) continue;
-    if (!melhor || p.resets_at > melhor.resets_at) melhor = p;
+    /* Mesma janela (o resets_at oscila 1s entre sessoes): fica o MAIOR
+       used_percent, que so cresce dentro da janela - ou seja, o mais recente.
+       Comparar so resets_at mantinha o primeiro arquivo lido e gravou 6% com a
+       conta em 11% (2026-09-10). Janela diferente: fica a mais nova. */
+    const mesma = melhor && Math.abs(p.resets_at - melhor.resets_at) < 3600;
+    if (!melhor || (mesma ? p.used_percent > melhor.used_percent : p.resets_at > melhor.resets_at)) melhor = p;
   }
 
   if (!melhor) {
