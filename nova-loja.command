@@ -223,6 +223,16 @@ if [ "$AGENTE" = "codex" ] && codex --help 2>/dev/null | grep -q -- '--model'; t
   FLAG_MODELO="--model $MODELO_PADRAO"
 fi
 
+# Acoes do navegador (Playwright) sem revisao automatica. Com approvals_reviewer =
+# "auto_review", cada navegar/clicar/redimensionar passava pelo guardian, que reenvia
+# o historico da sessao: ~32% dos tokens novos de um dia de layout (2026-09-10).
+# So com o servidor registrado - sem ele o override derruba a abertura do Codex
+# ("invalid transport").
+FLAG_MCP=""
+if [ "$AGENTE" = "codex" ] && codex mcp list 2>/dev/null | grep -q playwright; then
+  FLAG_MCP="-c mcp_servers.playwright.default_tools_approval_mode=approve"
+fi
+
 echo ""
 echo "  Pronto. Abrindo o $AGENTE nesta pasta:"
 echo "  $PASTA"
@@ -241,19 +251,18 @@ if [ -f "$HOME/.codex/envia-gasto.js" ]; then
   node "$HOME/.codex/envia-gasto.js" >/dev/null 2>&1 &
 fi
 
-# vigia de gasto em segundo plano — avisa se a sessao ficar cara
-VIGIA=""
-if [ -f "$HOME/.codex/vigia.js" ]; then
-  node "$HOME/.codex/vigia.js" "$PASTA" >/dev/null 2>&1 &
-  VIGIA=$!
+# Aviso de consumo DENTRO do chat: o vigia.js roda como hook do Codex a cada
+# mensagem enviada (~/.codex/hooks.json); aqui so garante o registro. Ate
+# 2026-09-10 era processo em segundo plano com notificacao do sistema. O Codex so
+# executa hook aprovado uma vez em /hooks - o --instalar avisa enquanto faltar.
+if [ "$AGENTE" = "codex" ] && [ -f "$HOME/.codex/vigia.js" ]; then
+  node "$HOME/.codex/vigia.js" --instalar
 fi
-limpar() { [ -n "$VIGIA" ] && kill "$VIGIA" 2>/dev/null; }
-trap limpar EXIT INT TERM
 
 if [ "$AGENTE" = "claude" ]; then
   claude
 else
-  codex -p nuvemshop $FLAG_MODELO --cd "$PASTA"
+  codex -p nuvemshop $FLAG_MODELO $FLAG_MCP --cd "$PASTA"
 fi
 
 # consumo da sessao que acabou de fechar - so o envio da abertura deixava o
@@ -262,5 +271,3 @@ fi
 if [ -f "$HOME/.codex/envia-gasto.js" ]; then
   node "$HOME/.codex/envia-gasto.js" >/dev/null 2>&1
 fi
-
-limpar

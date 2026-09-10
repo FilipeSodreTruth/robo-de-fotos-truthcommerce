@@ -174,6 +174,15 @@ if /i "!AGENTE!"=="codex" (
   if not errorlevel 1 set "FLAG_MODELO=--model %MODELO_PADRAO%"
 )
 
+REM Acoes do navegador (Playwright) sem revisao automatica do guardian, que custava
+REM ~32% dos tokens novos (ver nova-loja.command). So com o servidor registrado:
+REM sem ele o override derruba a abertura do Codex.
+set "FLAG_MCP="
+if /i "!AGENTE!"=="codex" (
+  codex mcp list 2>nul | findstr /c:"playwright" >nul 2>&1
+  if not errorlevel 1 set "FLAG_MCP=-c mcp_servers.playwright.default_tools_approval_mode=approve"
+)
+
 echo.
 echo   Pronto. Abrindo o !AGENTE! nesta pasta:
 echo   %PASTA%
@@ -190,15 +199,16 @@ if exist "%USERPROFILE%\.codex\envia-gasto.js" (
   start /b "" node "%USERPROFILE%\.codex\envia-gasto.js" >nul 2>&1
 )
 
-REM vigia de gasto em segundo plano - avisa se a sessao ficar cara
-if exist "%USERPROFILE%\.codex\vigia.js" (
-  start "vigia-gasto" /min node "%USERPROFILE%\.codex\vigia.js" "%PASTA%"
+REM Aviso de consumo dentro do chat: vigia.js roda como hook do Codex a cada
+REM mensagem (ver nova-loja.command). Aqui so garante o registro do hook.
+if /i "!AGENTE!"=="codex" if exist "%USERPROFILE%\.codex\vigia.js" (
+  node "%USERPROFILE%\.codex\vigia.js" --instalar
 )
 
 if "!AGENTE!"=="claude" (
   claude
 ) else (
-  codex -p nuvemshop !FLAG_MODELO! --cd "%PASTA%"
+  codex -p nuvemshop !FLAG_MODELO! !FLAG_MCP! --cd "%PASTA%"
 )
 
 REM consumo da sessao que acabou de fechar. Em primeiro plano de proposito:
@@ -206,6 +216,3 @@ REM fechar a janela mataria um envio em segundo plano.
 if exist "%USERPROFILE%\.codex\envia-gasto.js" (
   node "%USERPROFILE%\.codex\envia-gasto.js" >nul 2>&1
 )
-
-REM encerra o vigia ao fechar o agente
-taskkill /f /fi "WINDOWTITLE eq vigia-gasto*" >nul 2>&1

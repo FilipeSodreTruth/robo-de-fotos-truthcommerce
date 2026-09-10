@@ -21,7 +21,7 @@ HANDOFF-modelo.md             template do handoff por loja
 settings.json                 permissões do Claude Code
 codex-config-nuvemshop.toml   referência do perfil do Codex
 gasto.js                      relatório de consumo sob demanda
-vigia.js                      vigia em segundo plano (avisos ao vivo)
+vigia.js                      hook do Codex: aviso de consumo no chat
 envia-gasto.js                manda o resumo agregado de consumo para um webhook
 nova-loja.command / .bat      atalhos de duplo clique (Mac / Windows)
 modo-simples/   AGENTS.md + CLAUDE.md
@@ -66,10 +66,15 @@ HANDOFF.md
 .modo             grava o modo daquela loja (não pergunta de novo)
 ```
 
-`vigia.js` e `gasto.js` ficam em `~/.codex/`, não na pasta da loja — são um por máquina. Os
-scripts de abertura baixam os dois e **iniciam o vigia automaticamente**, encerrando junto com
-o agente: o time é grande e não técnico, e aviso passivo que depende de alguém lembrar de rodar
-não funciona nesse contexto.
+`vigia.js` e `gasto.js` ficam em `~/.codex/`, não na pasta da loja — são um por máquina. O
+`vigia.js` é **hook `UserPromptSubmit` do Codex** (`~/.codex/hooks.json`, registrado pelo
+`node vigia.js --instalar` que o atalho roda, sem apagar hook de ninguém): avisa **no chat**, não
+por notificação do sistema — pedido do time em 2026-09-10, notificação some e ninguém lê. O
+Codex só executa hook aprovado uma vez em `/hooks`, por isso o comando registrado nunca muda
+(mudar exigiria aprovar de novo em cada PC); sem aprovação fica calado, e o atalho mostra a
+instrução até o hook rodar a primeira vez (`~/.codex/.aviso-gasto-ativo`). Pastas de loja não
+são "trusted" no Codex, então `.codex/hooks.json` por projeto não carregaria; `-c hooks...` na
+linha de abertura foi testado e ignorado.
 
 ## Decisões de desenho (o porquê)
 
@@ -87,9 +92,9 @@ existe caminho para acumular código morto. Ideia do Filipe.
 **Registro contínuo no handoff — regra + checagem estrutural.** Falhou na prática: alguém
 trabalhou uma sessão inteira sem registrar nada. Dois reforços: no manual, a escrita acontece
 **antes de responder ao usuário** (o momento se perde se ficar para o fim do turno); e o vigia
-compara o mtime de `codigo/` com o do `HANDOFF.md`, notificando se o segundo ficar 15 min para
-trás — palavra combinada: "atualiza o handoff". Mesmo padrão do nome do bloco e do
-`theme publish`: instrução sozinha não segura.
+compararia o mtime de `codigo/` com o do `HANDOFF.md`, avisando se o segundo ficasse 15 min para
+trás — palavra combinada: "atualiza o handoff". **Essa checagem nunca existiu no código**
+(conferido em 2026-09-10, no vigia antigo e no hook novo): hoje só a instrução segura.
 
 Teste para saber se está registrado o bastante: *se esta sessão morresse agora, outra pessoa
 continuaria só com o arquivo?* Gatilhos de escrita: publicação confirmada, decisão do usuário
@@ -139,10 +144,10 @@ ir direto ao `browser_evaluate` mirado.
 
 **Sessão curta é a maior alavanca.** Medição real: duas sessões de 90 e 105 turnos queimaram
 25M de tokens (44% de uma semana). Dois gatilhos levam ao mesmo lugar: o agente sugere `/new`
-ao fim de cada bloco, e o vigia notifica quando a sessão fica cara. Como o vigia é processo
-separado e o agente não vê a notificação, existe palavra combinada: o usuário escreve
-**"encerra"**, o agente fecha o handoff, resume em três linhas e libera o `/new`. O vigia zera
-os avisos ao detectar arquivo de sessão novo.
+ao fim de cada bloco, e o vigia avisa no chat quando a sessão fica cara. O aviso é
+`systemMessage` do hook e o agente não o vê, então existe palavra combinada: o usuário escreve
+**"encerra"**, o agente fecha o handoff, resume em três linhas e libera o `/new`. O estado dos
+avisos é por sessão, em `~/.codex/.aviso-gasto/<session_id>.json`.
 
 **O cache JÁ ESTÁ no `total_tokens` — não somar de novo.** Medido em 6 sessões reais de
 `~/.codex/sessions` (2026-09-09, unânime): `total_tokens == input_tokens + output_tokens`, e
@@ -179,8 +184,27 @@ trocas, 9 notificações). Agora `SEMANA_NOVO = 50M` e a sessão soma os arquivo
 `parent_thread_id`; a mesma simulação dá 0 notificações. Pausa longa custa, mas pouco: 83 min
 parado com 100k de contexto virou uma chamada de 93 mil novos (cache expirado), ~0,2% da semana.
 
-**A semana vale ~6M de token novo** (ordem de grandeza; os 112x de dispersão são provavelmente
-peso por modelo):
+**Onde foi o gasto de um dia de layout** (2026-09-10, newstore, ~1,04M tokens novos, ~2% da
+semana, duas mudanças no site). ~32%: o **guardian** — com `approvals_reviewer = "auto_review"`
+no `config.toml` da máquina, cada ação do Playwright (navegar, redimensionar, clicar, evaluate)
+passava por revisão automática que reenvia o histórico: 72 revisões de ~4,5 mil tokens, só 1
+delas de comando de terminal. O launcher agora abre o Codex com
+`-c mcp_servers.playwright.default_tools_approval_mode=approve` (valores aceitos: `auto`,
+`prompt`, `writes`, `approve`), **só se `codex mcp list` mostrar o playwright** — sem o servidor
+registrado o override derruba a abertura ("invalid transport"). ~15%: saída de comando
+(`theme push` com 40 mil caracteres, `sed` de trechos do `home.json`, pesquisa na web sobre o
+Codex) — o manual manda `2>&1 | tail -15` e leitura só do trecho. ~15%: voltar à sessão depois
+de 83 min parado — o hook **segura a mensagem** com 1 h parada e contexto ≥100k, mandando `/new`
+direto ("encerra" já pagaria o reenvio); reenviar a mesma mensagem libera. Resultado esperado:
+a mesma entrega por ~metade.
+
+**Correção de premissa:** "`theme push` com confirmação" (acima) vale só no **Claude**, pelo
+`settings.json`. No Codex (`workspace-write` com rede) o push roda sem aprovação — quem segura
+é a regra dos dois "ok" no manual.
+
+**SUPERADO em 2026-09-10 — a régua medida pela virada de % é ≥~56M (ver acima), então os % desta
+tabela e do parágrafo seguinte estão ~9x altos.** Estimativa original: a semana vale ~6M de token
+novo (ordem de grandeza; os 112x de dispersão são provavelmente peso por modelo):
 
 | | token novo | % da semana |
 |---|---:|---:|
@@ -194,8 +218,8 @@ robô de imagens 9,1 (ele roda em `codex-img-*` isolado, mas usa o MESMO `auth.j
 0,1 semana. O aperto vem de dividir a conta — separar os pools resolve mais que qualquer
 economia dentro da sessão.
 
-**Avisos do vigia, em % da semana** (2026-09-09): 1,7% / 4% / 8% de token novo, o último
-repetindo a cada 5 min. Antes eram 0,8M / 2M / 4M de token TOTAL, que media a coisa errada — uma
+**Avisos do vigia, em % da semana**: 1,7% / 4% / 8% de token novo, no chat, cada nível uma vez
+e o último a cada mensagem (régua de 6M em 2026-09-09; 50M desde 2026-09-10). Antes eram 0,8M / 2M / 4M de token TOTAL, que media a coisa errada — uma
 sessão de layout que disparava o alarme antigo tinha custado 0,9% da semana. Com os cortes
 novos, as 3.074 sessões do robô de imagens ficam caladas e as pesadas avisam.
 
@@ -363,8 +387,9 @@ visibilidade de categoria, API de blog, e — atenção — o **timeout de webho
 - [ ] Confirmar a sintaxe de `rules`/execpolicy do Codex para bloquear `theme publish`
 - [ ] Testar o `.bat` de ponta a ponta no Windows
 - [ ] Renomear o repositório
-- [ ] **Recalibrar os limites do vigia com `gasto.js sessoes`** — os valores atuais vêm da
-      premissa errada sobre o cache (ver Controle de custo) e podem estar dobrados
+- [x] Recalibrar a régua do vigia — feito em 2026-09-10 pela virada de % do log (ver Controle de custo)
+- [ ] Confirmar, na primeira máquina que aprovar em `/hooks`, que o aviso aparece no chat e que
+      a mensagem segurada depois de 1 h pode ser reenviada
 - [ ] Validar por medição os limites de `css_code` e `custom_css`
 - [ ] Verificar o timeout de 3s nos webhooks do n8n
 - [ ] Levar a disciplina de sessão/handoff para o repositório do MercadoLivre

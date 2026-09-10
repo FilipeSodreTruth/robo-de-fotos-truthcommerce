@@ -28,6 +28,11 @@ descoberta em cinco turnos.
 
 **Não carregue skills** (superpowers ou qualquer outra), mesmo que alguma pareça se aplicar: o
 fluxo deste manual já é o processo, e cada skill lida é reenviada em toda chamada ao modelo.
+
+**Saída de comando também gasta cota.** `theme pull`/`push` listam todos os arquivos: rode com
+`2>&1 | tail -15`, como nos passos abaixo. Nos JSON do tema, ache o alvo com `rg -n` e leia só o
+trecho (`sed -n 'X,Yp'`), nunca o arquivo inteiro. Não pesquise na web como a CLI funciona: se
+um comando falhar, use `--help`.
 </modelo>
 
 <parâmetros>
@@ -160,7 +165,7 @@ tem o recurso liberado — pare e avise.
 servidor o que não existe local.
 
 ```bash
-tiendanube theme pull --installation-id $THEME_ID -y
+tiendanube theme pull --installation-id $THEME_ID -y 2>&1 | tail -15
 BACKUP="../$(basename "$PWD")-backup"; rm -rf "$BACKUP" && cp -r . "$BACKUP"
 ```
 
@@ -191,7 +196,7 @@ Conte os caracteres contra os limites e avise se passar de 80%. Entao:
 ```bash
 # se o usuário pode ter mexido no editor visual desde o pull, refaca o pull antes:
 # o campo de CSS não tem histórico e um push cego apaga o trabalho dele
-tiendanube theme push --installation-id $THEME_ID -y
+tiendanube theme push --installation-id $THEME_ID -y 2>&1 | tail -15
 ```
 
 Use `theme push`. **Nunca** `theme installation publish`: ele troca a versão no ar.
@@ -213,7 +218,7 @@ Restaure primeiro, investigue depois:
 
 ```bash
 BACKUP="../$(basename "$PWD")-backup"
-cp -r "$BACKUP"/. . && tiendanube theme push --installation-id $THEME_ID -y
+cp -r "$BACKUP"/. . && tiendanube theme push --installation-id $THEME_ID -y 2>&1 | tail -15
 ```
 
 Confirme que o backup é **desta** loja — restaurar o de outra publicaria o tema errado. Avise que

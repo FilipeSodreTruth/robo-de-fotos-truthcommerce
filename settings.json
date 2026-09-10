@@ -25,7 +25,8 @@
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(rg:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(tail:*)"
     ],
 
     "ask": [

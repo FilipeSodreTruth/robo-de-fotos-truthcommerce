@@ -133,10 +133,9 @@ que estava na memória, é só pedir: "copia de novo".
 
 ---
 
-# Se aparecer um aviso de "sessão longa"
+# Se aparecer um aviso de consumo no chat
 
-De vez em quando aparece uma notificação dizendo que a conversa está ficando cara. São dois
-passos:
+O próprio chat do agente avisa quando a conversa está ficando cara. São dois passos:
 
 1. **Escreva `encerra` para o agente.** Ele fecha o que estava fazendo, anota tudo no arquivo e
    te diz onde parou.
@@ -145,7 +144,12 @@ passos:
 Não é erro nem problema. É que quanto mais tempo a conversa fica aberta, mais caro fica cada
 mensagem — e a cota acaba antes da hora. Recomeçar não perde nada.
 
-O aviso funciona sozinho, você não precisa configurar nada.
+**Se ele segurar sua mensagem dizendo que a sessão ficou parada**, digite `/new` direto, sem
+`encerra`. Depois de mais de uma hora parada, qualquer mensagem na conversa antiga custa como se
+ela recomeçasse do zero. Quer continuar ali mesmo assim? É só enviar a mensagem de novo.
+
+**Na primeira vez**, a janela de abertura pede para aprovar o aviso: dentro do agente, digite
+`/hooks` e aprove o do `vigia.js`. É uma vez só por computador. O aviso existe só no Codex.
 
 **Se ele não conseguir resolver algo depois de duas tentativas**, ele mesmo vai te avisar para
 digitar `/model` e escolher um modelo mais forte. Depois de resolver, não precisa voltar o
