@@ -100,9 +100,7 @@ set MARCA=%USERPROFILE%\.codex\.playwright-pronto
 if not exist "%MARCA%" (
   echo   Preparando o navegador de teste ^(primeira vez, pode demorar^)...
   codex mcp list 2>nul | findstr /i playwright >nul 2>&1
-  if errorlevel 1 codex mcp add playwright -- npx @playwright/mcp@latest >nul 2>&1
-  where claude >nul 2>&1
-  if not errorlevel 1 claude mcp add playwright npx @playwright/mcp@latest >nul 2>&1
+  if errorlevel 1 call codex mcp add playwright -- npx @playwright/mcp@latest >nul 2>&1
   call npx --yes playwright install chromium >nul 2>&1
   type nul > "%MARCA%"
   echo   Navegador de teste pronto.
@@ -206,6 +204,10 @@ if /i "!AGENTE!"=="codex" if exist "%USERPROFILE%\.codex\vigia.js" (
 )
 
 if "!AGENTE!"=="claude" (
+  REM Playwright no escopo do usuario, a cada abertura: sem -s o Claude registra so
+  REM na pasta onde rodou. Se ja existir, falha calado. "call" porque claude.cmd
+  REM chamado sem call encerra este .bat.
+  call claude mcp add -s user playwright npx @playwright/mcp@latest >nul 2>&1
   claude
 ) else (
   codex -p nuvemshop !FLAG_MODELO! !FLAG_MCP! --cd "%PASTA%"

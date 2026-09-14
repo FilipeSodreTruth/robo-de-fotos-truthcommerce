@@ -325,6 +325,24 @@ seletor de primeira.
 
 ## Armadilhas já encontradas (custaram tempo)
 
+- **Loop "instale o Playwright" (2026-09-14):** desde o Codex 0.153 as ferramentas MCP **não
+  aparecem na lista inicial do modelo** — ficam no registro `ALL_TOOLS` do `exec`, como
+  `tools.mcp__playwright__browser_*`. O passo 01 mandava conferir `browser_navigate` e parar se
+  não existisse: o agente não procurava, pedia reinstalação, e a sessão nova repetia. Servidor
+  estava registrado e subia em 0,7 s. A primeira correção ("procure em `ALL_TOOLS`") falhou numa
+  rodada de teste na gobbi: o modelo escreveu `tools.ALL_TOOLS`, que não existe (`ALL_TOOLS` é
+  global no `exec`), a busca deu Script error e ele concluiu que faltava navegador. Agora o passo
+  01 do Codex é uma linha literal, `text(typeof tools.mcp__playwright__browser_navigate)` →
+  `function` (Claude: `ToolSearch`), e os manuais proíbem pedir reinstalação se `mcp list` mostrar
+  o servidor.
+  Nos 4 manuais (Codex/Claude × simples/avançado) o passo 01 acha as ferramentas.
+- **`claude mcp add` sem `-s` registra só na pasta onde rodou** (escopo `local`). O atalho
+  registrava dentro da primeira loja, uma vez por máquina; as outras lojas abriam sem navegador,
+  e o comando que o manual mandava rodar no Terminal registrava na pasta do Terminal. Agora o
+  atalho roda `claude mcp add -s user` a cada abertura com Claude (se já existe, falha calado em
+  ~1 s) e os manuais citam `-s user`. No `.bat`, `claude`/`codex mcp add` ganharam `call` —
+  `.cmd` chamado sem `call` encerra o `.bat`. `.bat` não testado (sem Windows aqui).
+
 - **Playwright no macOS:** Chromium lançado do terminal dentro do sandbox do Codex morre com
   `Operation not permitted`. **Só o caminho MCP funciona** (o servidor roda fora do sandbox).
   Nunca instalar `playwright` na pasta do cliente. `playwright` e `@playwright/mcp` são pacotes

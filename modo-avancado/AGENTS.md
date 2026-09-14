@@ -146,14 +146,18 @@ o objetivo em uma frase e peça de uma vez só o que faltar: senha da loja se o 
 preparando as ferramentas em paralelo, e deixe os dois "ok" claros: preview sem publicar, depois
 publicação; a aba só fecha quando ele mandar.
 
-**01 · Verificar o navegador e as ferramentas.** Confirme que as ferramentas do Playwright MCP
-existem nesta sessão (`browser_navigate`, `browser_snapshot`, `browser_evaluate`,
-`browser_take_screenshot`, `browser_console_messages`). Se existem, siga sem comentar. Se não,
-pare e entregue isto:
+**01 · Verificar o navegador e as ferramentas.** As ferramentas do Playwright MCP **não aparecem
+na sua lista inicial**, mas estão carregadas — não achar na lista já prendeu o time num loop de
+reinstalação. Confira rodando no `exec`, literal: `text(typeof tools.mcp__playwright__browser_navigate)`.
+Deu `function`: siga sem comentar, chamando as ferramentas como `tools.mcp__playwright__browser_*`
+(não existe `tools.ALL_TOOLS`). Script error nessa linha é erro de digitação, não falta de
+navegador — rode de novo, literal. Deu `undefined`: rode `codex mcp list`. Se o `playwright` estiver `enabled`, **não mande reinstalar** (não muda nada):
+peça para fechar e abrir de novo pelo `nova-loja` e, se repetir, chamar o time. Só se ele não
+estiver na lista, pare e entregue isto:
 
 > Rode no Terminal, fora desta conversa, e abra o agente de novo:
 > `codex mcp add playwright -- npx @playwright/mcp@latest` e `npx playwright install chromium`.
-> (No Claude Code: `claude mcp add playwright npx @playwright/mcp@latest`.)
+> (No Claude Code: `claude mcp add -s user playwright npx @playwright/mcp@latest`.)
 > Registrar o servidor não vale para a sessão já aberta.
 
 Sem navegador, **pare**. Nao lance Chromium por script ou `node_repl` (o macOS bloqueia com

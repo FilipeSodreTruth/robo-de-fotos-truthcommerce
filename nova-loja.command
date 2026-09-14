@@ -129,10 +129,6 @@ if [ ! -f "$MARCA" ]; then
       || echo "  Nao consegui registrar o Playwright no Codex - rode manualmente:
      codex mcp add playwright -- npx @playwright/mcp@latest"
   fi
-  if command -v claude >/dev/null 2>&1; then
-    claude mcp list 2>/dev/null | grep -q playwright || \
-      claude mcp add playwright npx @playwright/mcp@latest >/dev/null 2>&1
-  fi
   npx --yes playwright install chromium >/dev/null 2>&1 \
     && echo "  Navegador de teste instalado." \
     || echo "  Aviso: nao consegui baixar o Chromium. Rode:  npx playwright install chromium"
@@ -260,6 +256,10 @@ if [ "$AGENTE" = "codex" ] && [ -f "$HOME/.codex/vigia.js" ]; then
 fi
 
 if [ "$AGENTE" = "claude" ]; then
+  # Playwright no escopo do usuario, a cada abertura. Sem -s o Claude registra so
+  # na pasta onde rodou (a primeira loja) e as outras abrem sem navegador. Se ja
+  # existir, o add falha calado.
+  claude mcp add -s user playwright npx @playwright/mcp@latest >/dev/null 2>&1 || true
   claude
 else
   codex -p nuvemshop $FLAG_MODELO $FLAG_MCP --cd "$PASTA"

@@ -110,13 +110,16 @@ que já está nele.** Confirme o objetivo em uma frase, peça de uma vez só o q
 se o handoff não tiver; a senha da loja se ele disser `sim`, porque o valor não fica gravado), e
 diga que testa ao vivo, ele aprova, e o código fica pronto no arquivo para ele copiar. Não pede token nem instala nada na loja.
 
-**01 · Verificar o navegador.** Confirme que as ferramentas do Playwright MCP existem nesta
-sessão (`browser_navigate`, `browser_snapshot`, `browser_evaluate`, `browser_take_screenshot`,
-`browser_console_messages`). Se existem, siga sem comentar. Se não, pare e entregue isto:
+**01 · Verificar o navegador.** As ferramentas do Playwright MCP podem vir **adiadas**, fora da
+sua lista inicial. Carregue com `ToolSearch` (`select:mcp__playwright__browser_navigate,mcp__playwright__browser_snapshot,mcp__playwright__browser_evaluate,mcp__playwright__browser_take_screenshot,mcp__playwright__browser_console_messages`)
+antes de concluir qualquer coisa — não achar na lista inicial já prendeu o time num loop de
+reinstalação. Achou: siga sem comentar. Não achou: rode `claude mcp list`. Se o `playwright`
+aparecer conectado, **não mande reinstalar** (não muda nada): peça para fechar e abrir de novo pelo
+`nova-loja` e, se repetir, chamar o time. Só se ele não estiver na lista, pare e entregue isto:
 
 > Rode no Terminal, fora desta conversa, e abra o agente de novo:
 > `codex mcp add playwright -- npx @playwright/mcp@latest` e `npx playwright install chromium`.
-> (No Claude Code: `claude mcp add playwright npx @playwright/mcp@latest`.)
+> (No Claude Code: `claude mcp add -s user playwright npx @playwright/mcp@latest`.)
 > Registrar o servidor não vale para a sessão já aberta.
 
 Sem navegador, **pare**. Não lance Chromium por script ou `node_repl` (o macOS bloqueia com
