@@ -161,40 +161,52 @@ function contaCodex() {
 /* A janela que importa e a SEMANAL da assinatura, nao "os ultimos 7 dias".
    O proprio log carrega ela: rate_limits.primary tem window_minutes (10080 =
    7 dias), used_percent e resets_at (epoch em segundos). Pegamos o snapshot
-   mais recente de todas as sessoes varridas - e por conta, entao vale pra
-   maquina inteira.
+   de evento mais recente entre as sessoes varridas.
 
-   Sem snapshot (Codex antigo, log sem rate_limits) caimos em 7 dias corridos
-   pra tras, que e a aproximacao razoavel. */
+   Se o snapshot venceu no reset, projetamos o proximo periodo pela duracao da
+   janela e zeramos a porcentagem antiga; ela so volta quando chegar snapshot
+   emitido dentro da janela nova. Sem snapshot algum, usamos 7 dias corridos. */
 function janelaSemanal(arquivos) {
   let melhor = null;
   for (const f of arquivos) {
     const texto = seguro(() => fs.readFileSync(f, "utf8"));
     if (!texto) continue;
-    const m = texto.match(/"rate_limits":\{[^{]*"primary":\{[^}]*\}/g);
-    if (!m) continue;
-    const j = seguro(() => JSON.parse("{" + m[m.length - 1] + "}}").rate_limits);
-    const p = j?.primary;
-    if (!p?.resets_at || !p?.window_minutes) continue;
-    /* Mesma janela (o resets_at oscila 1s entre sessoes): fica o MAIOR
-       used_percent, que so cresce dentro da janela - ou seja, o mais recente.
-       Comparar so resets_at mantinha o primeiro arquivo lido e gravou 6% com a
-       conta em 11% (2026-09-10). Janela diferente: fica a mais nova. */
-    const mesma = melhor && Math.abs(p.resets_at - melhor.resets_at) < 3600;
-    if (!melhor || (mesma ? p.used_percent > melhor.used_percent : p.resets_at > melhor.resets_at)) melhor = p;
+    // Associa rate_limits ao horario do evento. Um snapshot antigo pode ser
+    // anexado a um envio novo; sem isso, uma janela encerrada volta como atual.
+    for (const linha of texto.split("\n")) {
+      if (!linha.includes("\"rate_limits\"")) continue;
+      const ev = seguro(() => JSON.parse(linha));
+      const p = ev?.payload?.rate_limits?.primary;
+      const instante = Date.parse(ev?.timestamp || ev?.payload?.timestamp || "") || 0;
+      if (!p?.resets_at || !p?.window_minutes || !instante) continue;
+      if (!melhor || instante > melhor.instante) melhor = { ...p, instante };
+    }
   }
 
   if (!melhor) {
     const fim = Date.now();
     return { inicio: fim - 7 * 864e5, fim, usado_percent: null, estimada: true };
   }
-  const fim = melhor.resets_at * 1000;
-  return {
-    inicio: fim - melhor.window_minutes * 60000,
-    fim,
-    usado_percent: typeof melhor.used_percent === "number" ? melhor.used_percent : null,
-    estimada: false,
-  };
+
+  const agora = Date.now();
+  const duracao = melhor.window_minutes * 60000;
+  let fim = melhor.resets_at * 1000;
+  let inicio = fim - duracao;
+  let usadoPercent = typeof melhor.used_percent === "number" ? melhor.used_percent : null;
+  let estimada = false;
+
+  // Se o snapshot mais novo ja venceu, projeta os limites fixos da janela. A
+  // porcentagem antiga deixa de valer no reset, entao e marcada como desconhecida
+  // ate chegar um rate_limits emitido dentro da janela nova.
+  if (fim <= agora) {
+    const janelasVencidas = Math.floor((agora - fim) / duracao) + 1;
+    inicio = fim + (janelasVencidas - 1) * duracao;
+    fim = inicio + duracao;
+    usadoPercent = null;
+    estimada = true;
+  }
+
+  return { inicio, fim, usado_percent: usadoPercent, estimada };
 }
 
 function coletar() {
@@ -295,4 +307,5 @@ function main() {
   });
 }
 
-main();
+if (require.main === module) main();
+module.exports = { janelaSemanal };
