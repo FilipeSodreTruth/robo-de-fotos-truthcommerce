@@ -12,7 +12,7 @@ REM Onde as pastas dos clientes ficam
 set BASE=%USERPROFILE%\nuvemshop-lojas
 
 REM Modelo padrao do time. Trocar aqui muda em todas as maquinas na proxima abertura.
-set MODELO_PADRAO=gpt-5.6-terra
+set MODELO_PADRAO=gpt-6-luna
 
 REM ------------------------------------------------------------
 REM  Auto-atualizacao: pega a versao mais nova deste proprio atalho.

@@ -16,7 +16,7 @@ ESPELHO="https://github.com/FilipeSodreTruth/robo-de-fotos-truthcommerce/raw/mai
 BASE="$HOME/nuvemshop-lojas"
 
 # Modelo padrao do time. Trocar aqui muda em todas as maquinas na proxima abertura.
-MODELO_PADRAO="gpt-5.6-terra"
+MODELO_PADRAO="gpt-6-luna"
 
 # ------------------------------------------------------------
 #  baixar <caminho-no-repositorio> <destino>

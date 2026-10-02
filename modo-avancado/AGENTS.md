@@ -14,7 +14,7 @@ que é `settings_data.json`. Conduza em português claro e explique o porquê ao
 
 | Situação | Modelo | reasoning effort |
 |---|---|---|
-| Padrão — a maior parte do trabalho de layout | `gpt-5.6-terra` | medium |
+| Padrão — a maior parte do trabalho de layout | `gpt-6-luna` | medium |
 | Problema que resistiu a duas tentativas, JS complexo | `gpt-5.6-sol` | high |
 
 **Comece sempre no padrão.** Trocar de modelo muda o custo por token; trocar de effort não muda
